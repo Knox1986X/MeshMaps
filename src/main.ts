@@ -4,12 +4,13 @@ import { pickAt } from './map/picking';
 import { setBboxDraft } from './map/highlight';
 import { useRegion } from './map/regionSource';
 import { attachLocation } from './map/location';
+import { attachRouting } from './map/route';
+import { renderRoutePanel } from './ui/routePanel';
 import { refreshUserSource, setUserData } from './map/userLayers';
 import { attachDrawing, handleDrawClick, undoPoint } from './map/drawing';
 import { appState } from './core/store';
 import { drawStore, resetDraw } from './core/draw';
 import { draftRect } from './core/geo';
-import { formatCoords } from './core/format';
 import { db } from './storage/db';
 import { ensureDefaultLayer, watchUserData } from './storage/userData';
 import { seedPresets } from './storage/regionsService';
@@ -66,6 +67,7 @@ async function boot(): Promise<void> {
   if (!drawStore.get().layerId) drawStore.set({ layerId: defaultLayer });
 
   attachLocation(map);
+  attachRouting(map);
   attachDrawing(map);
   mountControls(ui, map);
   mountCard(ui, map);
@@ -97,18 +99,7 @@ async function boot(): Promise<void> {
   });
 
   mountBottomNav(ui, {
-    route: (box) => {
-      const s = appState.get();
-      if (!s.routeTo) {
-        box.append(el('p', 'mm-muted', 'Выберите объект на карте и нажмите «Маршрут сюда».'));
-        return;
-      }
-      box.append(
-        el('p', '', `Пункт назначения: ${s.routeTo.name}`),
-        el('p', 'mm-muted', formatCoords(s.routeTo.lat, s.routeTo.lng)),
-        el('p', 'mm-muted', 'Построение офлайн-маршрута появится на этапе 6.'),
-      );
-    },
+    route: (box) => renderRoutePanel(box),
     layers: (box) => renderLayersPanel(box),
     regions: (box) => renderRegionsPanel(box, map),
     settings: (box) => {

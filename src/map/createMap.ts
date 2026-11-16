@@ -6,6 +6,7 @@ import { appState } from '../core/store';
 import { draftRect } from '../core/geo';
 import { addLocationLayers, buildLocationFeatures } from './location';
 import { addDraftLayers, addUserLayers, setDraft } from './userLayers';
+import { addRouteLayers, setRouteOnMap } from './route';
 import { drawStore } from '../core/draw';
 
 export const MOSCOW: [number, number] = [37.6173, 55.7558];
@@ -55,6 +56,8 @@ export async function createMap(container: HTMLElement): Promise<MlMap> {
   // style.load fires on the first load and after every setStyle (region switch).
   map.on('style.load', () => {
     registerIcons(map);
+    addRouteLayers(map);
+    setRouteOnMap(map, appState.get().route);
     addUserLayers(map);
     addDraftLayers(map);
     const d = drawStore.get();

@@ -145,7 +145,15 @@ export function mountCard(root: HTMLElement, map: MlMap): void {
         copyBtn.querySelector('span')!.textContent = 'Нет доступа к буферу';
       }
     };
-    actions.append(routeBtn, copyBtn);
+    const fromBtn = el('button', 'mm-btn mm-btn-ghost');
+    fromBtn.innerHTML = `${ICON.route}<span>Маршрут отсюда</span>`;
+    fromBtn.onclick = () => {
+      appState.set({
+        routeFrom: { lng: f.lngLat.lng, lat: f.lngLat.lat, name: f.title },
+        tab: 'route',
+      });
+    };
+    actions.append(routeBtn, fromBtn, copyBtn);
 
     card.append(head, rows, actions);
     if (f.userFeatureId) void appendUserActions(card, f.userFeatureId, map);

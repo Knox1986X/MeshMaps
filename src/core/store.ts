@@ -1,4 +1,5 @@
 import type { Feature, Geometry } from 'geojson';
+import type { Profile, RouteProgress, RouteResult } from './routing/types';
 
 export type Listener<T> = (state: T, prev: T) => void;
 
@@ -84,6 +85,13 @@ export interface AppState {
   locationError: string | null;
   /** Bumped on every change of user layers/features. */
   userRev: number;
+  /** Route start chosen from a map object; null means the current GPS position. */
+  routeFrom: RouteTarget | null;
+  routeProfile: Profile;
+  route: RouteResult | null;
+  routeBusy: boolean;
+  routeError: string | null;
+  routeProgress: RouteProgress | null;
 }
 
 export const appState = new Store<AppState>({
@@ -99,4 +107,10 @@ export const appState = new Store<AppState>({
   locationMode: 'off',
   locationError: null,
   userRev: 0,
+  routeFrom: null,
+  routeProfile: 'foot',
+  route: null,
+  routeBusy: false,
+  routeError: null,
+  routeProgress: null,
 });

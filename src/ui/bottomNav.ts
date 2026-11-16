@@ -47,6 +47,12 @@ export function mountBottomNav(root: HTMLElement, panels: Partial<Record<TabId, 
     const changed =
       s.tab !== prev.tab ||
       s.routeTo !== prev.routeTo ||
+      s.routeFrom !== prev.routeFrom ||
+      s.routeProfile !== prev.routeProfile ||
+      s.route !== prev.route ||
+      s.routeBusy !== prev.routeBusy ||
+      s.routeError !== prev.routeError ||
+      s.routeProgress !== prev.routeProgress ||
       s.is3D !== prev.is3D ||
       s.regionsRev !== prev.regionsRev ||
       s.activeRegionId !== prev.activeRegionId ||

@@ -208,3 +208,11 @@ body {
 .mm-swatch { width: 34px; height: 34px; border: none; border-radius: 10px; padding: 0; background: none; cursor: pointer; }
 .mm-user-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .mm-user-actions label { margin-top: 4px; }
+
+/* ---------- Stage 6: routing ---------- */
+.mm-route-row { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.mm-route-label { width: 74px; flex: none; font-size: 13px; }
+.mm-route-value { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mm-route-summary { font-size: 18px; font-weight: 700; margin: 6px 0 2px; }
+.mm-route-ok { color: #34d399; font-weight: 700; }
+.mm-error { color: #f87171; }

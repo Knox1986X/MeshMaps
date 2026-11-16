@@ -1,0 +1,11 @@
+import { RoadGraph, planRoute } from './graph.ts';
+const x0 = 37.6, y0 = 55.4;
+const P = (i: number, j: number): [number, number] => [x0 + i * 0.001, y0 + j * 0.001];
+const L = (coords: any, o: any = {}) => ({ coords, cls: 'primary', sub: '', oneway: 0, access: {}, user: null, ...o });
+const main = L([P(0, 0), P(10, 0)]);
+const trail = L([P(5, 0), P(5, 5)], { cls: 'path', sub: 'footway' });
+const south = L([P(0, 0), P(0, -5), P(10, -5), P(10, 0)], { cls: 'secondary' });
+const g = new RoadGraph(); for (const l of [main, south, trail]) g.addLine(l);
+const a = g.snap(P(5, 1), 'foot'); const b = g.snap(P(5, 4), 'foot');
+console.log('a', g.lng[a].toFixed(6), g.lat[a].toFixed(6), 'b', g.lng[b].toFixed(6), g.lat[b].toFixed(6), 'P51', P(5,1), 'P54', P(5,4));
+const p = g.shortestPath(a, b, 'foot'); console.log(p && p.edges.map(e => [g.from[e], g.to[e], g.len[e].toFixed(1)]), p && p.seconds);
