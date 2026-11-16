@@ -29,37 +29,94 @@
 4. В MeshMaps: «Настройки» → Dropbox → введите App Key → «Подключить Dropbox» → подтвердите доступ в открывшейся вкладке → скопируйте код и вставьте в приложение.
 Редирект не используется, поэтому тот же поток работает в браузере, Tauri и Android. Ограничение: бэкап больше 150 МБ отклоняется (сессии загрузки не реализованы). Refresh-токен хранится в локальной базе устройства.
 8. GitHub Actions (APK + AppImage), инструкции CachyOS/Android, скрипты загрузки регионов.
+8. **Сборка и выпуск** (готово): GitHub Actions для debug-APK (`android-apk.yml`) и AppImage (`linux-appimage.yml`), иконки из `tools/icon/source.png` (Tauri и Android), разрешения геолокации в манифесте (`tools/android/prepare.mjs`), сохранение файлов через системный диалог в Tauri (плагины dialog и fs с capabilities), инструкции по APK, CachyOS и данным карты. Не проверено локально: сборка Rust и Gradle (в песочнице нет cargo и Java, а хосты Maven/crates.io не разрешены). Первый запуск workflow покажет ошибки сборки, если они есть.
 
 ## Разработка
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # typecheck + production build -> dist/
+npm run dev          # http://localhost:5173
+npm run build        # typecheck + production build -> dist/
 ```
 
-## Android
+## Android APK
+
+### Сборка в GitHub Actions (рекомендуется)
+Workflow `.github/workflows/android-apk.yml` запускается при пуше в `main`, при теге `v*` и вручную
+(Actions → Android APK → Run workflow). Он собирает **debug-APK** и кладёт его в артефакты запуска.
+При теге `v*` APK дополнительно прикрепляется к GitHub Release.
+
+Шаги workflow: `npm ci` → `npm run build` → `npx cap add android` (только если папки `android/` нет) →
+`npx cap sync android` → `node tools/android/prepare.mjs` (разрешения геолокации, иконки, тёмный фон
+иконки) → `./gradlew assembleDebug`.
+
+Установка на телефон: скачайте `MeshMaps-debug.apk`, разрешите установку из неизвестных источников и
+откройте файл. Debug-APK подписан отладочным ключом, для публикации в магазинах понадобится
+release-сборка с собственным ключом (пока не настроена).
+
+### Сборка локально
+Нужны Node 22, JDK 21 и Android SDK (Android Studio или `sdkmanager`).
 ```bash
+npm ci
 npm run build
-npx cap add android      # один раз
+npx cap add android            # один раз, создаёт папку android/ (в Git она не хранится)
 npx cap sync android
+node tools/android/prepare.mjs
 cd android && ./gradlew assembleDebug
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
 ```
+При каждом изменении веб-части достаточно `npm run build && npx cap sync android`.
 
-## Linux (CachyOS / Arch)
+## Linux (CachyOS / Arch): AppImage
+
+### Готовый AppImage
+Workflow `.github/workflows/linux-appimage.yml` собирает `MeshMaps_<версия>_amd64.AppImage` на Ubuntu 22.04
+(для совместимости со старой glibc) и выкладывает его в артефакты и в Release при теге `v*`.
+Запуск: `chmod +x MeshMaps_*.AppImage && ./MeshMaps_*.AppImage`.
+
+### Сборка на CachyOS
 ```bash
-sudo pacman -S --needed base-devel curl wget file openssl appmenu-gtk-module \
-  libappindicator-gtk3 librsvg xdotool webkit2gtk-4.1 rustup nodejs npm
+sudo pacman -S --needed base-devel curl wget file openssl librsvg xdotool \
+  libappindicator-gtk3 webkit2gtk-4.1 rustup nodejs npm
 rustup default stable
-npm run tauri dev
-npm run tauri build -- --bundles appimage
+npm ci
+npm run tauri dev                              # разработка
+npm run tauri build -- --bundles appimage      # AppImage
+# результат: src-tauri/target/release/bundle/appimage/MeshMaps_*.AppImage
 ```
+Если AppImage не запускается из-за FUSE: `sudo pacman -S fuse2` либо распакуйте его командой
+`./MeshMaps_*.AppImage --appimage-extract` и запустите `squashfs-root/AppRun`.
 
-## Данные карты (Курганская область)
-Приложение ожидает **схему OpenMapTiles** (слои transportation, building, water, landcover, poi). Протокольные
-сборки Protomaps используют другую схему, поэтому регион строится planetiler с профилем OpenMapTiles:
+Сохранение файлов (экспорт GeoJSON/GPX, бэкап .zip) в Linux-сборке использует системный диалог «Сохранить».
 
+## Данные карты
+
+Приложение читает `.pmtiles` со **схемой OpenMapTiles** (слои `transportation`, `place`, `poi`, `building`,
+`water`, `landcover` и др.). Данные для регионов можно получить двумя способами.
+
+### Вариант 1. Сборка региона своими силами (Курганская область)
+Скрипт `tools/build-region.sh` скачивает OSM-экстракт Geofabrik и planetiler (схема OpenMapTiles):
 ```bash
-tools/build-region.sh kurgan     # скачивает Geofabrik ural-fed-district и planetiler, создаёт data/kurgan.pmtiles
+tools/build-region.sh kurgan     # создаёт data/kurgan.pmtiles
 ```
-Затем в приложении: вкладка «Регионы» → «Импорт .pmtiles» → выбрать `data/kurgan.pmtiles`, потом «Открыть офлайн».
-Рамка Курганской области: W 61.7, S 54.0, E 68.9, N 57.0. Требования: Java 21+, ~8 ГБ RAM, ~10 ГБ диска.
+Нужны Java 21+, около 8 ГБ RAM и 10 ГБ диска. Рамка региона: W 61.7, S 54.0, E 68.9, N 57.0.
+
+### Вариант 2. Вырезка из полной планеты OpenFreeMap
+OpenFreeMap публикует еженедельные полные планеты, в том числе в PMTiles, в схеме OpenMapTiles.
+Файл весит около сотни гигабайт, поэтому регион вырезается без его скачивания целиком утилитой
+[pmtiles CLI](https://docs.protomaps.com/pmtiles/cli):
+```bash
+pmtiles extract https://btrfs.openfreemap.com/areas/planet/<версия>/tiles.pmtiles data/kurgan.pmtiles \
+  --bbox=61.7,54.0,68.9,57.0 --maxzoom=14
+```
+Актуальные версии смотрите в [репозитории OpenFreeMap](https://github.com/hyperknot/openfreemap).
+Если вырезка не работает с удалённым файлом, используйте вариант 1.
+
+**Важно:** ежедневные сборки Protomaps используют собственную схему, а не OpenMapTiles, поэтому
+приложение с ними не отобразит слои. Не используйте их для регионов.
+
+### Импорт в приложении
+Вкладка «Регионы» → «Импорт .pmtiles» → выбрать файл → «Открыть офлайн».
+
+### Онлайн-режим
+Без выбранного региона карта берёт тайлы с `tiles.openfreemap.org` (нужен интернет). По правилам OpenFreeMap
+массовая загрузка тайлов для офлайн-использования ограничена, поэтому для офлайн используйте регионы.

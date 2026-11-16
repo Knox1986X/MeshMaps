@@ -11,9 +11,14 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
+/** True inside the Tauri desktop shell (Linux AppImage). */
+function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
 /**
  * Saves a file to the user: Android → share sheet (Files, Drive, Telegram…);
- * desktop/Tauri → regular download.
+ * Tauri desktop → native save dialog; browser → regular download.
  */
 export async function saveFile(name: string, mime: string, data: Uint8Array | string): Promise<void> {
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
@@ -26,6 +31,18 @@ export async function saveFile(name: string, mime: string, data: Uint8Array | st
     });
     const uri = await Filesystem.getUri({ path: name, directory: Directory.Cache });
     await Share.share({ title: name, url: uri.uri, dialogTitle: 'Сохранить файл' });
+    return;
+  }
+  if (isTauri()) {
+    // Desktop app: native save dialog, then write the bytes to the chosen path.
+    const [{ save }, { writeFile }] = await Promise.all([
+      import('@tauri-apps/plugin-dialog'),
+      import('@tauri-apps/plugin-fs'),
+    ]);
+    const ext = name.includes('.') ? name.split('.').pop()! : '';
+    const path = await save({ defaultPath: name, filters: ext ? [{ name: ext.toUpperCase(), extensions: [ext] }] : [] });
+    if (!path) return;
+    await writeFile(path, bytes);
     return;
   }
   const blob = new Blob([bytes as BlobPart], { type: mime });
