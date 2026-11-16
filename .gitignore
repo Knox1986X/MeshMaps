@@ -10,3 +10,5 @@ src-tauri/gen/
 .env
 .DS_Store
 coverage/
+tools/fonts-src/
+.venv-tools/
