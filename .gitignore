@@ -13,3 +13,6 @@ coverage/
 tools/fonts-src/
 .venv-tools/
 data/
+
+# local scratch (tests, bundles)
+.cache/
