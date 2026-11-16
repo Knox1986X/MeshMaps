@@ -54,6 +54,17 @@ export interface BboxDraft {
   b: [number, number] | null;
 }
 
+export type LocationMode = 'off' | 'follow' | 'nav';
+
+export interface LocationFix {
+  lng: number;
+  lat: number;
+  /** Horizontal accuracy in metres. */
+  accuracy: number;
+  /** Ground speed in m/s, null when unknown. */
+  speed: number | null;
+}
+
 export interface AppState {
   selected: PickedFeature | null;
   routeTo: RouteTarget | null;
@@ -63,6 +74,12 @@ export interface AppState {
   bboxDraft: BboxDraft | null;
   /** Bumped whenever the region database changes, so panels re-render. */
   regionsRev: number;
+  /** Last GPS fix; null until the first fix arrives. */
+  location: LocationFix | null;
+  /** Heading in degrees clockwise from north (GPS course when moving, otherwise compass). */
+  heading: number | null;
+  locationMode: LocationMode;
+  locationError: string | null;
 }
 
 export const appState = new Store<AppState>({
@@ -73,4 +90,8 @@ export const appState = new Store<AppState>({
   activeRegionId: null,
   bboxDraft: null,
   regionsRev: 0,
+  location: null,
+  heading: null,
+  locationMode: 'off',
+  locationError: null,
 });

@@ -9,6 +9,7 @@ import { formatCoords } from './core/format';
 import { db } from './storage/db';
 import { seedPresets } from './storage/regionsService';
 import { mountControls } from './ui/controls';
+import { attachLocation } from './map/location';
 import { mountCard } from './ui/card';
 import { mountBottomNav } from './ui/bottomNav';
 import { renderRegionsPanel } from './ui/regionsPanel';
@@ -46,6 +47,32 @@ async function boot(): Promise<void> {
       }
     }
   }
+
+  const hud = el('div', 'mm-hud glass');
+  hud.hidden = true;
+  ui.appendChild(hud);
+  const toast = el('div', 'mm-toast glass');
+  toast.hidden = true;
+  ui.appendChild(toast);
+  let toastTimer = 0;
+
+  attachLocation(map);
+  appState.subscribe((s, prev) => {
+    if (s.location !== prev.location || s.heading !== prev.heading) {
+      if (s.location) {
+        const kmh = s.location.speed != null ? Math.round(s.location.speed * 3.6) : null;
+        const hdg = s.heading != null ? `${Math.round(s.heading)}°` : '—';
+        hud.textContent = `±${Math.round(s.location.accuracy)} м · ${kmh != null ? kmh + ' км/ч' : 'стоим'} · ${hdg}`;
+        hud.hidden = false;
+      }
+    }
+    if (s.locationError !== prev.locationError && s.locationError) {
+      toast.textContent = s.locationError;
+      toast.hidden = false;
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => (toast.hidden = true), 4500);
+    }
+  });
 
   mountControls(ui, map);
   mountCard(ui, map);

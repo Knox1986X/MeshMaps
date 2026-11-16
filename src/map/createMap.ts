@@ -4,6 +4,7 @@ import { registerIcons } from './icons';
 import { addHighlightLayers, addOverlayLayers, setBboxDraft, setHighlight } from './highlight';
 import { appState } from '../core/store';
 import { draftRect } from '../core/geo';
+import { addLocationLayers, buildLocationFeatures } from './location';
 
 export const MOSCOW: [number, number] = [37.6173, 55.7558];
 /** Online fallback: OpenFreeMap serves OpenMapTiles-schema vector tiles. */
@@ -54,7 +55,11 @@ export async function createMap(container: HTMLElement): Promise<MlMap> {
     registerIcons(map);
     addHighlightLayers(map);
     addOverlayLayers(map);
+    addLocationLayers(map);
     const s = appState.get();
+    (map.getSource('mm-location') as import('maplibre-gl').GeoJSONSource | undefined)?.setData(
+      buildLocationFeatures(s.location, s.heading),
+    );
     setHighlight(map, s.selected?.highlight ?? null);
     setBboxDraft(map, draftRect(s.bboxDraft));
   });
