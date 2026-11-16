@@ -50,7 +50,8 @@ export function mountBottomNav(root: HTMLElement, panels: Partial<Record<TabId, 
       s.is3D !== prev.is3D ||
       s.regionsRev !== prev.regionsRev ||
       s.activeRegionId !== prev.activeRegionId ||
-      s.bboxDraft !== prev.bboxDraft;
+      s.bboxDraft !== prev.bboxDraft ||
+      s.userRev !== prev.userRev;
     if (changed) void renderSheet(s.tab);
   });
   void renderSheet(appState.get().tab);

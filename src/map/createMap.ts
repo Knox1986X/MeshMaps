@@ -5,6 +5,8 @@ import { addHighlightLayers, addOverlayLayers, setBboxDraft, setHighlight } from
 import { appState } from '../core/store';
 import { draftRect } from '../core/geo';
 import { addLocationLayers, buildLocationFeatures } from './location';
+import { addDraftLayers, addUserLayers, setDraft } from './userLayers';
+import { drawStore } from '../core/draw';
 
 export const MOSCOW: [number, number] = [37.6173, 55.7558];
 /** Online fallback: OpenFreeMap serves OpenMapTiles-schema vector tiles. */
@@ -53,6 +55,10 @@ export async function createMap(container: HTMLElement): Promise<MlMap> {
   // style.load fires on the first load and after every setStyle (region switch).
   map.on('style.load', () => {
     registerIcons(map);
+    addUserLayers(map);
+    addDraftLayers(map);
+    const d = drawStore.get();
+    setDraft(map, d.points, d.polygon, d.selectedVertex);
     addHighlightLayers(map);
     addOverlayLayers(map);
     addLocationLayers(map);

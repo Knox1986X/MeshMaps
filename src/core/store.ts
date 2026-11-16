@@ -38,7 +38,9 @@ export interface RouteTarget {
 }
 
 export interface PickedFeature {
-  kind: 'poi' | 'building' | 'road';
+  kind: 'poi' | 'building' | 'road' | 'user';
+  /** Set for user-made objects: id of the FeatureRecord. */
+  userFeatureId?: string;
   title: string;
   subtitle: string;
   address: string | null;
@@ -80,6 +82,8 @@ export interface AppState {
   heading: number | null;
   locationMode: LocationMode;
   locationError: string | null;
+  /** Bumped on every change of user layers/features. */
+  userRev: number;
 }
 
 export const appState = new Store<AppState>({
@@ -94,4 +98,5 @@ export const appState = new Store<AppState>({
   heading: null,
   locationMode: 'off',
   locationError: null,
+  userRev: 0,
 });

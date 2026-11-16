@@ -2,6 +2,9 @@ import type { Map as MlMap, MapMouseEvent, MapGeoJSONFeature } from 'maplibre-gl
 import type { Feature, Geometry, LineString, MultiLineString } from 'geojson';
 import { ROAD_CLASS_RU, POI_CLASS_RU, asNumber, asString } from '../core/format';
 import type { PickedFeature } from '../core/store';
+import { LINE_TYPE_RU, type LineType } from '../core/types';
+import { USER_PICK_LAYERS } from './userLayers';
+import { formatMeters, lineLength, ringArea } from '../core/geo';
 
 const POI_LAYERS = ['poi'];
 const BUILDING_LAYERS = ['building-3d'];
@@ -57,6 +60,31 @@ export function pickAt(map: MlMap, e: MapMouseEvent): PickedFeature | null {
   const lngLat = { lng, lat };
   const { x, y } = e.point;
   const hit = (layers: string[]) => map.queryRenderedFeatures(box(x, y, 12), { layers });
+
+  const own = hit(USER_PICK_LAYERS)[0];
+  if (own) {
+    const kind = own.properties?.kind as string;
+    const fid = String(own.properties?.fid ?? '');
+    const name = asString(own.properties?.name);
+    const geom = own.geometry;
+    let sub = kind === 'poi' ? 'POI' : kind === 'polygon' ? 'Зона' : 'Линия';
+    if (kind === 'line') {
+      const lt = (own.properties?.lineType as LineType) ?? 'trail';
+      sub = `${LINE_TYPE_RU[lt] ?? 'Линия'} · ${formatMeters(lineLength((geom as GeoJSON.LineString).coordinates as [number, number][]))}`;
+    } else if (kind === 'polygon') {
+      sub = `Зона · ${Math.round(ringArea((geom as GeoJSON.Polygon).coordinates[0] as [number, number][]))} м²`;
+    }
+    return {
+      kind: 'user',
+      userFeatureId: fid,
+      title: name ?? 'Без названия',
+      subtitle: sub,
+      address: null,
+      heightM: null,
+      lngLat,
+      highlight: { type: 'Feature', properties: {}, geometry: geom },
+    };
+  }
 
   const poi = hit(POI_LAYERS)[0];
   if (poi) {
