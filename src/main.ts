@@ -6,6 +6,8 @@ import { useRegion } from './map/regionSource';
 import { attachLocation } from './map/location';
 import { attachRouting } from './map/route';
 import { renderRoutePanel } from './ui/routePanel';
+import { renderDropboxPanel } from './ui/dropboxPanel';
+import { mountSearch } from './ui/searchBar';
 import { refreshUserSource, setUserData } from './map/userLayers';
 import { attachDrawing, handleDrawClick, undoPoint } from './map/drawing';
 import { appState } from './core/store';
@@ -72,6 +74,7 @@ async function boot(): Promise<void> {
   mountControls(ui, map);
   mountCard(ui, map);
   mountDrawBar(ui);
+  mountSearch(ui, map);
 
   const hud = el('div', 'mm-hud glass');
   hud.hidden = true;
@@ -109,6 +112,7 @@ async function boot(): Promise<void> {
         el('p', 'mm-muted', `Источник: ${s.activeRegionId ? 'офлайн-регион' : 'онлайн OpenFreeMap'}`),
         el('p', 'mm-muted', 'Шрифты подписей и иконки POI встроены в приложение.'),
       );
+      void renderDropboxPanel(box);
     },
   });
 

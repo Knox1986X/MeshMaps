@@ -7,6 +7,7 @@ import { draftRect } from '../core/geo';
 import { addLocationLayers, buildLocationFeatures } from './location';
 import { addDraftLayers, addUserLayers, setDraft } from './userLayers';
 import { addRouteLayers, setRouteOnMap } from './route';
+import { addSearchLayers } from './search';
 import { drawStore } from '../core/draw';
 
 export const MOSCOW: [number, number] = [37.6173, 55.7558];
@@ -57,6 +58,7 @@ export async function createMap(container: HTMLElement): Promise<MlMap> {
   map.on('style.load', () => {
     registerIcons(map);
     addRouteLayers(map);
+    addSearchLayers(map);
     setRouteOnMap(map, appState.get().route);
     addUserLayers(map);
     addDraftLayers(map);
