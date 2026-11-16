@@ -1,17 +1,18 @@
 import { appState, type TabId } from '../core/store';
 import { el, ICON } from './dom';
-import { formatCoords } from '../core/format';
 
-const TABS: { id: TabId; label: string; icon: string; stage: number }[] = [
-  { id: 'map', label: 'Карта', icon: ICON.map, stage: 2 },
-  { id: 'route', label: 'Маршрут', icon: ICON.route_tab, stage: 6 },
-  { id: 'layers', label: 'Слои', icon: ICON.layers, stage: 5 },
-  { id: 'regions', label: 'Регионы', icon: ICON.regions, stage: 3 },
-  { id: 'settings', label: 'Настройки', icon: ICON.settings, stage: 7 },
+export type PanelRenderer = (box: HTMLElement) => void | Promise<void>;
+
+const TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: 'map', label: 'Карта', icon: ICON.map },
+  { id: 'route', label: 'Маршрут', icon: ICON.route_tab },
+  { id: 'layers', label: 'Слои', icon: ICON.layers },
+  { id: 'regions', label: 'Регионы', icon: ICON.regions },
+  { id: 'settings', label: 'Настройки', icon: ICON.settings },
 ];
 
-/** Bottom navigation + sheet. Non-map tabs show their state; features arrive in their stage. */
-export function mountBottomNav(root: HTMLElement): void {
+/** Bottom navigation; the sheet above it renders the panel for the active tab. */
+export function mountBottomNav(root: HTMLElement, panels: Partial<Record<TabId, PanelRenderer>>): void {
   const sheet = el('section', 'mm-sheet glass');
   sheet.hidden = true;
   const nav = el('nav', 'mm-nav glass');
@@ -25,45 +26,34 @@ export function mountBottomNav(root: HTMLElement): void {
     nav.appendChild(b);
   }
 
-  const renderSheet = (tab: TabId) => {
-    sheet.replaceChildren();
-    const s = appState.get();
+  const renderSheet = async (tab: TabId) => {
+    buttons.forEach((b, id) => b.classList.toggle('active', id === tab));
     if (tab === 'map') {
       sheet.hidden = true;
+      sheet.replaceChildren();
       return;
     }
-    sheet.hidden = false;
+    const box = el('div', 'mm-sheet-body');
     const meta = TABS.find((t) => t.id === tab)!;
-    sheet.append(el('h3', 'mm-sheet-title', meta.label));
-    if (tab === 'route') {
-      if (s.routeTo) {
-        sheet.append(
-          el('p', '', `Пункт назначения: ${s.routeTo.name}`),
-          el('p', 'mm-muted', formatCoords(s.routeTo.lat, s.routeTo.lng)),
-          el('p', 'mm-muted', `Построение офлайн-маршрута: этап ${meta.stage}.`),
-        );
-      } else {
-        sheet.append(el('p', 'mm-muted', 'Выберите объект на карте и нажмите «Маршрут сюда».'));
-      }
-    } else if (tab === 'settings') {
-      sheet.append(
-        el('p', 'mm-muted', `Режим карты: ${s.is3D ? '3D (наклон 55°)' : '2D'}`),
-        el('p', 'mm-muted', 'Шрифты подписей: локальные PBF (public/fonts), без интернета.'),
-        el('p', 'mm-muted', `Этап настроек: ${meta.stage}.`),
-      );
-    } else {
-      sheet.append(el('p', 'mm-muted', `Раздел появится на этапе ${meta.stage}.`));
-    }
+    const scroll = el('div', 'mm-sheet-scroll');
+    scroll.append(el('h3', 'mm-sheet-title', meta.label), box);
+    sheet.replaceChildren(scroll);
+    sheet.hidden = false;
+    const panel = panels[tab];
+    if (panel) await panel(box);
   };
 
-  const sync = (tab: TabId) => {
-    buttons.forEach((b, id) => b.classList.toggle('active', id === tab));
-    renderSheet(tab);
-  };
   appState.subscribe((s, prev) => {
-    if (s.tab !== prev.tab || s.routeTo !== prev.routeTo || s.is3D !== prev.is3D) sync(s.tab);
+    const changed =
+      s.tab !== prev.tab ||
+      s.routeTo !== prev.routeTo ||
+      s.is3D !== prev.is3D ||
+      s.regionsRev !== prev.regionsRev ||
+      s.activeRegionId !== prev.activeRegionId ||
+      s.bboxDraft !== prev.bboxDraft;
+    if (changed) void renderSheet(s.tab);
   });
-  sync(appState.get().tab);
+  void renderSheet(appState.get().tab);
 
   root.append(sheet, nav);
 }

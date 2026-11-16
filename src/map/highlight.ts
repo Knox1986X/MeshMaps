@@ -67,3 +67,44 @@ export function setHighlight(map: MlMap, feature: Feature<Geometry> | null): voi
   if (!src) return;
   src.setData(feature ? { type: 'FeatureCollection', features: [feature] } : EMPTY);
 }
+
+const BBOX_SOURCE = 'mm-bbox';
+
+/** Overlay for the region rectangle being drawn. */
+export function addOverlayLayers(map: MlMap): void {
+  if (map.getSource(BBOX_SOURCE)) return;
+  map.addSource(BBOX_SOURCE, { type: 'geojson', data: EMPTY });
+  map.addLayer({
+    id: 'mm-bbox-fill',
+    type: 'fill',
+    source: BBOX_SOURCE,
+    paint: { 'fill-color': '#a855f7', 'fill-opacity': 0.15 },
+  });
+  map.addLayer({
+    id: 'mm-bbox-line',
+    type: 'line',
+    source: BBOX_SOURCE,
+    paint: { 'line-color': '#38bdf8', 'line-width': 2.5, 'line-dasharray': [2, 1.5] },
+  });
+}
+
+/** Draws the rectangle [west, south, east, north] or clears it. */
+export function setBboxDraft(map: MlMap, rect: [number, number, number, number] | null): void {
+  const src = map.getSource(BBOX_SOURCE) as GeoJSONSource | undefined;
+  if (!src) return;
+  if (!rect) {
+    src.setData(EMPTY);
+    return;
+  }
+  const [w, s, e, n] = rect;
+  src.setData({
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] },
+      },
+    ],
+  });
+}

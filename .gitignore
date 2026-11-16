@@ -12,3 +12,4 @@ src-tauri/gen/
 coverage/
 tools/fonts-src/
 .venv-tools/
+data/

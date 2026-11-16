@@ -48,11 +48,21 @@ export interface PickedFeature {
   highlight: Feature<Geometry>;
 }
 
+/** Region rectangle being drawn on the map: first and second corner ([lng, lat]). */
+export interface BboxDraft {
+  a: [number, number] | null;
+  b: [number, number] | null;
+}
+
 export interface AppState {
   selected: PickedFeature | null;
   routeTo: RouteTarget | null;
   tab: TabId;
   is3D: boolean;
+  activeRegionId: string | null;
+  bboxDraft: BboxDraft | null;
+  /** Bumped whenever the region database changes, so panels re-render. */
+  regionsRev: number;
 }
 
 export const appState = new Store<AppState>({
@@ -60,4 +70,7 @@ export const appState = new Store<AppState>({
   routeTo: null,
   tab: 'map',
   is3D: true,
+  activeRegionId: null,
+  bboxDraft: null,
+  regionsRev: 0,
 });
