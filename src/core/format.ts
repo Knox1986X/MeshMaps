@@ -60,3 +60,18 @@ export function asNumber(v: unknown): number | null {
   if (typeof v === 'string' && v.trim() && Number.isFinite(Number(v))) return Number(v);
   return null;
 }
+
+/** Settlement and admin place classes (OpenMapTiles `place` layer). */
+export const PLACE_CLASS_RU: Record<string, string> = {
+  country: 'Страна',
+  state: 'Регион',
+  city: 'Город',
+  town: 'Посёлок',
+  village: 'Село',
+  hamlet: 'Деревня',
+  suburb: 'Район',
+  neighbourhood: 'Микрорайон',
+  quarter: 'Квартал',
+  isolated_dwelling: 'Хутор',
+  island: 'Остров',
+};

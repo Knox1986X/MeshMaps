@@ -220,7 +220,7 @@ body {
 /* ---------- Stage 7: search, Dropbox ---------- */
 .mm-search {
   position: absolute; z-index: 15;
-  top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px; right: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 66px); left: 12px; right: 12px;
   max-width: 560px; margin: 0 auto;
   display: flex; flex-direction: column; gap: 8px;
 }

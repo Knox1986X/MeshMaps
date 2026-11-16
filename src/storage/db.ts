@@ -14,10 +14,26 @@ export interface RegionRecord {
   bytes: number;
   minZoom: number;
   maxZoom: number;
+  /** When the offline search index was last built (null: not built). */
+  indexedAt?: number | null;
   /** Geofabrik extract that covers the region, used to build the archive. */
   osmSource: string;
   error: string | null;
   createdAt: number;
+}
+
+/** One searchable name (settlement, admin area or POI) of an offline region. */
+export interface PlaceRecord {
+  id: string;
+  regionId: string;
+  kind: 'place' | 'poi';
+  /** Subtitle shown in results: «Город», «Регион», POI class, ... */
+  subtitle: string;
+  title: string;
+  /** Normalised title (lower case, ё→е) for diagnostics; matching is done on the title. */
+  norm: string;
+  lng: number;
+  lat: number;
 }
 
 export interface PrefRecord {
@@ -60,6 +76,7 @@ class MeshDB extends Dexie {
   prefs!: Table<PrefRecord, string>;
   layers!: Table<LayerRecord, string>;
   features!: Table<FeatureRecord, string>;
+  places!: Table<PlaceRecord, string>;
 
   constructor() {
     super('meshmaps');
@@ -70,6 +87,9 @@ class MeshDB extends Dexie {
     this.version(2).stores({
       layers: 'id, order',
       features: 'id, layerId, kind',
+    });
+    this.version(3).stores({
+      places: 'id, regionId, norm',
     });
   }
 }

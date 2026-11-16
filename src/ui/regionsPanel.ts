@@ -10,9 +10,13 @@ import {
   progress,
 } from '../storage/regionsService';
 import { useOnline, useRegion } from '../map/regionSource';
+import { buildPlaceIndex } from '../storage/placeIndex';
+import { openRegionFile } from '../storage/opfs';
 import { el, ICON } from './dom';
 
 let lastError: string | null = null;
+/** Search-index build progress per region id (0..1). */
+const indexing = new Map<string, number>();
 let draftName = '';
 
 const refresh = () => appState.set({ regionsRev: appState.get().regionsRev + 1 });
@@ -28,15 +32,42 @@ const STATUS_LABEL: Record<RegionRecord['status'], string> = {
   error: 'Ошибка',
 };
 
+/** Builds the offline search index of a ready region (places and POI from its archive). */
+async function indexRegion(rec: RegionRecord): Promise<void> {
+  if (!rec.fileName) return;
+  lastError = null;
+  indexing.set(rec.id, 0);
+  refresh();
+  let last = 0;
+  try {
+    const file = await openRegionFile(rec.fileName);
+    await buildPlaceIndex(rec, file, (f) => {
+      indexing.set(rec.id, f);
+      if (f - last >= 0.05 || f === 1) {
+        last = f;
+        refresh();
+      }
+    });
+  } catch (err) {
+    lastError = errorText(err);
+  } finally {
+    indexing.delete(rec.id);
+    refresh();
+  }
+}
+
 async function runImport(file: File, targetId: string | null): Promise<void> {
   lastError = null;
   refresh();
+  let rec: RegionRecord | null = null;
   try {
-    await importRegionFile(file, targetId, refresh);
+    rec = await importRegionFile(file, targetId, refresh);
   } catch (err) {
     lastError = errorText(err);
   }
   refresh();
+  // A freshly imported region gets its search index right away, so search works offline immediately.
+  if (rec) await indexRegion(rec);
 }
 
 async function activate(map: MlMap, rec: RegionRecord): Promise<void> {
@@ -99,6 +130,23 @@ function regionCard(map: MlMap, rec: RegionRecord, active: boolean): HTMLElement
   }
   if (rec.error) card.append(el('p', 'mm-error', rec.error));
 
+  const idx = indexing.get(rec.id);
+  if (idx !== undefined) {
+    const bar = el('div', 'mm-progress');
+    const fill = el('div', 'mm-progress-fill');
+    fill.style.width = `${Math.round(idx * 100)}%`;
+    bar.append(fill);
+    card.append(bar, el('p', 'mm-muted', `Строим поиск: ${Math.round(idx * 100)}%`));
+  } else if (rec.status === 'ready') {
+    card.append(
+      el(
+        'p',
+        'mm-muted',
+        rec.indexedAt ? `Поиск: ${new Date(rec.indexedAt).toLocaleDateString('ru-RU')}` : 'Поиск не построен: названия городов не будут найдены.',
+      ),
+    );
+  }
+
   if (rec.status === 'planned' || rec.status === 'error') {
     const cmd = planetilerCommand(rec);
     const pre = el('pre', 'mm-code');
@@ -121,6 +169,11 @@ function regionCard(map: MlMap, rec: RegionRecord, active: boolean): HTMLElement
     const open = el('button', 'mm-btn btn-grad mm-btn-sm', active ? 'Показать' : 'Открыть офлайн');
     open.onclick = () => activate(map, rec);
     actions.append(open);
+    if (indexing.get(rec.id) === undefined) {
+      const reindex = el('button', 'mm-btn mm-btn-ghost mm-btn-sm', rec.indexedAt ? 'Обновить поиск' : 'Построить поиск');
+      reindex.onclick = () => void indexRegion(rec);
+      actions.append(reindex);
+    }
   }
   if (rec.status === 'planned' || rec.status === 'error') {
     actions.append(fileButton('Импорт .pmtiles', 'mm-btn mm-btn-ghost mm-btn-sm', (f) => runImport(f, rec.id)));

@@ -1,27 +1,15 @@
 import type { GeoJSONSource, Map as MlMap } from 'maplibre-gl';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import { db } from '../storage/db';
-import { POI_CLASS_RU, ROAD_CLASS_RU, asString } from '../core/format';
+import { appState } from '../core/store';
+import { searchIndex } from '../storage/placeIndex';
+import { PLACE_CLASS_RU as PLACE_RU, POI_CLASS_RU, ROAD_CLASS_RU, asString } from '../core/format';
 import { matchScore, parseCoords, rankHits, type HitKind, type SearchHit } from '../core/search';
 
 /** Vector source of the active basemap (OpenMapTiles schema, offline or online). */
 const BASEMAP_SRC = 'openmaptiles';
 const PIN_SRC = 'mm-search-pin';
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
-
-const PLACE_RU: Record<string, string> = {
-  city: 'Город',
-  town: 'Посёлок',
-  village: 'Село',
-  hamlet: 'Деревня',
-  suburb: 'Район',
-  neighbourhood: 'Микрорайон',
-  quarter: 'Квартал',
-  isolated_dwelling: 'Хутор',
-  island: 'Остров',
-  state: 'Регион',
-  country: 'Страна',
-};
 
 const LAYERS: { sourceLayer: string; kind: HitKind }[] = [
   { sourceLayer: 'place', kind: 'place' },
@@ -113,8 +101,10 @@ export async function searchAll(map: MlMap, raw: string): Promise<SearchHit[]> {
     return [{ id: 'coords', title: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, subtitle: 'Координаты', lng, lat, kind: 'coords' }];
   }
   if (query.length < 2) return [];
-  const [user, base] = [await userHits(query), basemapHits(map, query)];
-  return rankHits([...user, ...base]);
+  const regionId = appState.get().activeRegionId;
+  const [indexed, user] = [await searchIndex(query, regionId), await userHits(query)];
+  // Streets and objects of the loaded map view complement the offline index.
+  return rankHits([...indexed, ...user, ...basemapHits(map, query)]);
 }
 
 /** Pin layer for the selected search result. */

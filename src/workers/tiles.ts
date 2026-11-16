@@ -75,3 +75,40 @@ export function decodeRoadTile(data: ArrayBuffer | Uint8Array, x: number, y: num
   }
   return lines;
 }
+
+export interface NamedPoint {
+  layer: string;
+  cls: string;
+  name: string;
+  lng: number;
+  lat: number;
+}
+
+/** Named point features (place, poi, ...) of one MVT tile; used to build the offline search index. */
+export function decodeNamedFeatures(
+  data: ArrayBuffer | Uint8Array,
+  x: number,
+  y: number,
+  z: number,
+  layers: string[],
+): NamedPoint[] {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  const tile = new VectorTile(new PbfReader(bytes));
+  const out: NamedPoint[] = [];
+  for (const layerName of layers) {
+    const layer = tile.layers[layerName];
+    if (!layer) continue;
+    for (let i = 0; i < layer.length; i++) {
+      const f = layer.feature(i);
+      if (f.type !== 1) continue;
+      const name = f.properties.name;
+      if (typeof name !== 'string' || name.trim() === '') continue;
+      const p = f.loadGeometry()[0]?.[0];
+      if (!p) continue;
+      const ext = f.extent || 4096;
+      const [lng, lat] = tileToLngLat(x + p.x / ext, y + p.y / ext, z);
+      out.push({ layer: layerName, cls: text(f.properties.class), name: name.trim(), lng, lat });
+    }
+  }
+  return out;
+}

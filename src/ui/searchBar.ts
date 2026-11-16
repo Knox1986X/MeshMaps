@@ -67,7 +67,13 @@ export function mountSearch(root: HTMLElement, map: MlMap): void {
 
   const render = (hits: SearchHit[]): void => {
     if (hits.length === 0) {
-      results.replaceChildren(el('p', 'mm-muted mm-search-empty', 'Ничего не найдено в загруженной области карты.'));
+      results.replaceChildren(
+        el(
+          'p',
+          'mm-muted mm-search-empty',
+          'Ничего не найдено. Города и области ищутся по индексу региона: откройте «Регионы» и постройте поиск.',
+        ),
+      );
     } else {
       results.replaceChildren(
         ...hits.map((hit) => {

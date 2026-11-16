@@ -136,6 +136,7 @@ export async function deleteRegion(id: string): Promise<void> {
   const rec = await db.regions.get(id);
   if (rec?.fileName) await removeRegionFile(rec.fileName);
   await db.regions.delete(id);
+  await db.places.where('regionId').equals(id).delete();
   const active = await db.prefs.get('activeRegion');
   if (active?.value === id) await db.prefs.put({ key: 'activeRegion', value: null });
 }
