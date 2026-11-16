@@ -1,0 +1,56 @@
+:root {
+  --bg-0: #0b0f19;
+  --bg-1: #0f172a;
+  --water: #0c1938;
+  --building: #1e2638;
+  --building-edge: #2d3748;
+  --park: #12302a;
+  --road-main: #38bdf8;
+  --road-main-2: #00f2fe;
+  --road-minor: #334155;
+  --route-a: #2563eb;
+  --route-b: #a855f7;
+  --panel: rgba(21, 29, 48, 0.72);
+  --panel-border: #38bdf833;
+  --chip: #38bdf8;
+  --text: #ffffff;
+  --text-muted: #94a3b8;
+  --grad-btn: linear-gradient(135deg, #2563eb, #a855f7);
+  --radius: 20px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; height: 100%; width: 100%; overflow: hidden; }
+body {
+  background: linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#map { position: absolute; inset: 0; }
+.glass {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.btn-grad {
+  background: var(--grad-btn);
+  color: var(--text);
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.35);
+}
+.chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text-muted);
+}
+.chip.active { background: var(--chip); color: #0b0f19; font-weight: 600; }
