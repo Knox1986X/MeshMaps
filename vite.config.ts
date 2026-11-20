@@ -13,7 +13,6 @@ export default defineConfig({
     strictPort: true,
     // Preview is served through an e2b proxy host — allow it.
     allowedHosts: true,
-    hmr: { clientPort: 443 },
   },
   build: {
     target: 'es2020',

@@ -50,18 +50,18 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
     let map: MapLibreMap
     try {
       map = new maplibregl.Map({
-      container: containerRef.current,
-      style: buildStyle(st.basemap, st.theme),
-      center: st.view.center,
-      zoom: variant === 'pip' ? Math.max(13.4, st.view.zoom) : st.view.zoom,
-      pitch: variant === 'pip' ? 58 : st.view.pitch,
-      bearing: variant === 'pip' ? -26 : st.view.bearing,
-      maxPitch: 85,
-      attributionControl: false,
-      preserveDrawingBuffer: true,
-      antialias: true,
-      fadeDuration: 140,
-      dragRotate: true,
+        container: containerRef.current,
+        style: buildStyle(st.basemap, st.theme),
+        center: st.view.center,
+        zoom: variant === 'pip' ? Math.max(13.4, st.view.zoom) : st.view.zoom,
+        pitch: variant === 'pip' ? 58 : st.view.pitch,
+        bearing: variant === 'pip' ? -26 : st.view.bearing,
+        maxPitch: 85,
+        attributionControl: false,
+        preserveDrawingBuffer: true,
+        antialias: true,
+        fadeDuration: 140,
+        dragRotate: true,
         keyboard: false,
       })
     } catch (err) {
