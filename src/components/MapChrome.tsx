@@ -218,7 +218,11 @@ function MiniMap({ theme }: { theme: 'dark' | 'light' }) {
     mapRef.current = mini
     mini.on('load', () => {
       try {
-        mini.setLayoutProperty('basemap', 'raster-opacity', theme === 'dark' ? 0.85 : 1)
+        // only raster basemaps have this layer; the vector one is a background layer
+        const layer = mini.getLayer('basemap')
+        if (layer && layer.type === 'raster') {
+          mini.setLayoutProperty('basemap', 'raster-opacity', theme === 'dark' ? 0.85 : 1)
+        }
       } catch {
         /* noop */
       }

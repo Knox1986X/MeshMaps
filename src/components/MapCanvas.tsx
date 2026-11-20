@@ -6,6 +6,7 @@ import { useStore } from '@/store/useStore'
 import type { MapObject } from '@/types'
 import { getCategory } from '@/icons/categories'
 import { buildStyle } from '@/map/styles'
+import { isBasemapReachable } from '@/map/basemapProbe'
 import { addMeshLayers, CLICK_LAYERS, HIT_LAYERS, SRC, setSourceData } from '@/map/layers'
 import {
   applyData,
@@ -42,6 +43,7 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
   const hoverPopupRef = useRef<Popup | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [fatal, setFatal] = useState<string | null>(null)
+  const basemap = useStore((s) => s.basemap)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -377,6 +379,22 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /* basemap health check — a blocked / key-protected provider must not leave an empty map */
+  useEffect(() => {
+    if (variant !== 'main') return
+    if (basemap === 'osm' || basemap === 'blank') return
+    let alive = true
+    const { view, setBasemap, toast } = useStore.getState()
+    void isBasemapReachable(basemap, view.center, view.zoom).then((reachable) => {
+      if (!alive || reachable) return
+      setBasemap('osm')
+      toast('warn', 'Подложка недоступна — включена OSM')
+    })
+    return () => {
+      alive = false
+    }
+  }, [basemap, variant])
 
   /* pulse animation for the selected marker (idea 21) */
   useEffect(() => {
