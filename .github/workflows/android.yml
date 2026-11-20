@@ -10,7 +10,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
@@ -56,10 +56,21 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: meshmaps-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      # on a tag push the APK is also attached to a GitHub Release,
+      # so it can be installed with one direct link
+      - name: Publish release with APK
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release view "$TAG" >/dev/null 2>&1 ||             gh release create "$TAG"               --title "MeshMaps ${TAG}"               --notes "Debug APK (Capacitor + MapLibre). Собран из коммита ${GITHUB_SHA}."               --latest
+          gh release upload "$TAG"             "android/app/build/outputs/apk/debug/app-debug.apk#meshmaps-${TAG}-debug.apk"             --clobber
