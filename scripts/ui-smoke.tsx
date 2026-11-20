@@ -157,6 +157,24 @@ async function main() {
   ok(rootEl.innerHTML.includes('Геометрия') && rootEl.innerHTML.includes('Свойства'), 'панель свойств открылась')
   ok(rootEl.innerHTML.includes(first.name.slice(0, 12)), 'имя выбранного объекта в панели')
 
+  // regression: the properties panel must not remount its fields on store updates
+  const area = rootEl.querySelector('textarea')
+  ok(!!area, 'текстовое поле описания найдено')
+  if (area) {
+    const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value')?.set
+    area.focus()
+    setter?.call(area, 'Черновик описания')
+    area.dispatchEvent(new dom.window.Event('input', { bubbles: true }))
+    await new Promise((r) => setTimeout(r, 60))
+    const other = useStore.getState().objects.find((o) => o.id !== first.id)!
+    useStore.getState().updateObject(other.id, { name: 'Обновление во время ввода' })
+    await new Promise((r) => setTimeout(r, 120))
+    const after = rootEl.querySelector('textarea')
+    ok(after === area, 'поле описания не пересоздаётся при обновлении store')
+    ok(after?.value === 'Черновик описания', 'введённый текст сохраняется после обновления store')
+    ok(dom.window.document.activeElement === area, 'фокус не теряется')
+  }
+
   useStore.getState().setFilter({ query: 'кофейня' })
   await new Promise((r) => setTimeout(r, 80))
   ok(useStore.getState().filters.query === 'кофейня', 'фильтр поиска записан')
