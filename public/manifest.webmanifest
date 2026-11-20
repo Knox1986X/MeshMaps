@@ -1,0 +1,26 @@
+{
+  "name": "MeshMaps — карта с разметкой",
+  "short_name": "MeshMaps",
+  "description": "Интерактивная карта OpenStreetMap с 2D/3D-разметкой: здания, ограждения, тропы, POI.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#070a10",
+  "theme_color": "#0b0f16",
+  "categories": ["navigation", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
