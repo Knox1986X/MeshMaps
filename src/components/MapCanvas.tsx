@@ -6,6 +6,7 @@ import { useStore } from '@/store/useStore'
 import type { MapObject } from '@/types'
 import { getCategory } from '@/icons/categories'
 import { buildStyle, isVectorBasemap } from '@/map/styles'
+import { describeBuilding } from '@/map/realism'
 import { isBasemapReachable } from '@/map/basemapProbe'
 import { addMeshLayers, CLICK_LAYERS, HIT_LAYERS, SRC, setSourceData } from '@/map/layers'
 import {
@@ -309,6 +310,28 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
         s.select(null)
         popupRef.current?.remove()
         popupRef.current = null
+
+        // A tap on the real city: show its metric height and floor count, so "как в 2ГИС"
+        // still tells you something factual. Only the keyless vector basemaps carry heights.
+        if (isVectorBasemap(s.basemap) && map.getZoom() >= 13.4) {
+          const buildingLayers = ['basemap-buildings-3d', 'basemap-buildings'].filter((id) =>
+            map.getLayer(id),
+          )
+          if (buildingLayers.length) {
+            const hit = map.queryRenderedFeatures(e.point, { layers: buildingLayers })[0]
+            const text = hit ? describeBuilding(hit.properties as Record<string, unknown>) : null
+            if (text) {
+              popupRef.current = new Popup({ closeButton: true, closeOnClick: true, offset: 12, className: 'mm-hover-popup' })
+                .setLngLat(lngLat)
+                .setHTML(
+                  `<div class="panel px-2.5 py-1.5 !rounded-xl"><div class="text-[12px] font-semibold leading-tight">${escapeHtml(
+                    text,
+                  )}</div><div class="muted text-[10px]">высота и этажи из OpenStreetMap</div></div>`,
+                )
+                .addTo(map)
+            }
+          }
+        }
       })
 
       map.on('dblclick', (e) => {

@@ -1,4 +1,10 @@
 import type { ExpressionSpecification, LayerSpecification, SourceSpecification } from 'maplibre-gl'
+import {
+  BUILDING_3D_FILTER,
+  DEFAULT_BUILDING_HEIGHT,
+  buildingBaseExpr,
+  buildingHeightExpr,
+} from './realism'
 
 /**
  * Keyless vector basemap built on OpenFreeMap tiles (OpenStreetMap data, OpenMapTiles schema).
@@ -44,6 +50,7 @@ type Palette = {
   building3dHigh: string
   label: string
   labelHalo: string
+  poi: string
 }
 
 const DARK: Palette = {
@@ -74,6 +81,7 @@ const DARK: Palette = {
   building3dHigh: '#44586f',
   label: '#a7b6cc',
   labelHalo: '#070b11',
+  poi: '#c8d3e2',
 }
 
 const LIGHT: Palette = {
@@ -102,6 +110,7 @@ const LIGHT: Palette = {
   building3dHigh: '#c9d5e4',
   label: '#46536a',
   labelHalo: '#ffffff',
+  poi: '#33415a',
 }
 
 const ROADS = ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'track', 'path'] as const
@@ -304,6 +313,7 @@ export function vectorLayers(theme: 'dark' | 'light'): LayerSpecification[] {
     type: 'fill',
     ...src,
     'source-layer': 'building',
+    filter: BUILDING_3D_FILTER,
     minzoom: 13.5,
     paint: {
       'fill-color': p.building,
@@ -362,31 +372,122 @@ export function vectorLayers(theme: 'dark' | 'light'): LayerSpecification[] {
     },
   })
 
-  // 3D buildings straight from the vector tiles: `render_height` is OSM's own height
-  // (height / building:levels), so this needs no Overpass request and works offline.
+  // 3D buildings straight from the vector tiles: `render_height` is OSM's own metric height
+  // (height / building:levels folded together by OpenMapTiles), so this needs no Overpass
+  // request, no API key and works from an offline pack. Heights are real meters, and the
+  // faces are shaded by the style `light` (one sun for roofs, facades and shadows).
   layers.push({
     id: 'basemap-buildings-3d',
     type: 'fill-extrusion',
     ...src,
     'source-layer': 'building',
+    filter: BUILDING_3D_FILTER,
     minzoom: 13,
     layout: { visibility: 'none' },
     paint: {
       'fill-extrusion-color': [
         'interpolate',
         ['linear'],
-        ['coalesce', ['get', 'render_height'], 8],
+        ['coalesce', ['get', 'render_height'], DEFAULT_BUILDING_HEIGHT],
         0,
         p.building3dLow,
-        24,
+        12,
         p.building3dMid,
-        80,
+        45,
         p.building3dHigh,
       ],
-      'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 7],
-      'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-      'fill-extrusion-opacity': 0.92,
-      'fill-extrusion-vertical-gradient': true,
+      'fill-extrusion-height': buildingHeightExpr(),
+      'fill-extrusion-base': buildingBaseExpr(),
+      // solid volumes read as real buildings; translucent ones look like ghosts
+      'fill-extrusion-opacity': 1,
+      'fill-extrusion-vertical-gradient': false,
+    },
+  })
+
+  // POIs and house numbers: what makes a neighbourhood recognisable at street level.
+  // Text only — the style ships no sprite, so we never guess an icon URL.
+  const POI_CLASSES = [
+    'cafe',
+    'restaurant',
+    'fast_food',
+    'bar',
+    'pub',
+    'shop',
+    'supermarket',
+    'bakery',
+    'pharmacy',
+    'hospital',
+    'clinic',
+    'dentist',
+    'school',
+    'university',
+    'college',
+    'kindergarten',
+    'bank',
+    'atm',
+    'lodging',
+    'fuel',
+    'parking',
+    'bus',
+    'railway',
+    'theatre',
+    'cinema',
+    'museum',
+    'attraction',
+    'park',
+    'playground',
+    'pitch',
+    'sports_centre',
+    'post',
+    'police',
+    'fire_station',
+    'library',
+    'place_of_worship',
+    'town_hall',
+  ]
+
+  layers.push({
+    id: 'basemap-housenumbers',
+    type: 'symbol',
+    ...src,
+    'source-layer': 'housenumber',
+    minzoom: 17,
+    layout: {
+      'text-field': ['get', 'housenumber'],
+      'text-font': ['Open Sans Semibold'],
+      'text-size': zoomInterp(17, 8.5, 20, 11),
+      'text-padding': 3,
+      'text-allow-overlap': false,
+    },
+    paint: {
+      'text-color': p.label,
+      'text-halo-color': p.labelHalo,
+      'text-halo-width': 1.2,
+      'text-opacity': 0.72,
+    },
+  })
+
+  layers.push({
+    id: 'basemap-pois',
+    type: 'symbol',
+    ...src,
+    'source-layer': 'poi',
+    minzoom: 15.5,
+    filter: ['all', ['has', 'name'], ['in', ['get', 'class'], ['literal', POI_CLASSES]]],
+    layout: {
+      'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
+      'text-font': ['Open Sans Semibold'],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 15.5, 9.5, 18, 12],
+      'text-max-width': 7,
+      'text-padding': 4,
+      'text-optional': true,
+      'symbol-sort-key': ['coalesce', ['get', 'rank'], 10],
+    },
+    paint: {
+      'text-color': p.poi,
+      'text-halo-color': p.labelHalo,
+      'text-halo-width': dark ? 1.3 : 1.1,
+      'text-opacity': 0.9,
     },
   })
 

@@ -25,6 +25,7 @@ import { getCategory, CATEGORIES } from '../src/icons/categories'
 import { iconSvg } from '../src/icons'
 import { BASEMAPS, attributionFor, buildStyle, isVectorBasemap, sampleTileUrl } from '../src/map/styles'
 import { vectorLayers, vectorSources } from '../src/map/vectorStyle'
+import { describeBuilding, infoForBuilding, lightFor, pluralFloors } from '../src/map/realism'
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
 import {
   CITIES,
@@ -309,6 +310,34 @@ ok(useStore.getState().pending.height === 12, 'высота здания по у
 
 const tpl = createObject({ type: 'building', geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } })
 ok(tpl.type === 'building' && tpl.color.length === 7, 'createObject проставляет цвет и тип')
+
+/* ---------------- реалистичная карта: высоты, этажи, свет ---------------- */
+
+const realistic = vectorLayers('dark').find((l) => l.id === 'basemap-buildings-3d') as any
+ok(!!realistic && realistic.type === 'fill-extrusion', '3D-здания — fill-extrusion')
+ok(JSON.stringify(realistic.paint['fill-extrusion-height']).includes('render_height'), 'высота берётся из render_height (реальные метры OSM)')
+ok(JSON.stringify(realistic.paint['fill-extrusion-base']).includes('render_min_height'), 'основание — render_min_height')
+ok(realistic.paint['fill-extrusion-opacity'] === 1, 'стены непрозрачные (как настоящие дома)')
+ok(realistic.paint['fill-extrusion-vertical-gradient'] === false, 'градиент выключен: свет даёт реальные тени граней')
+ok(JSON.stringify(realistic.filter).includes('hide_3d'), 'скрытые 3D-части не выдавливаются')
+
+const poi = vectorLayers('light').find((l) => l.id === 'basemap-pois')
+const houses = vectorLayers('light').find((l) => l.id === 'basemap-housenumbers')
+ok(!!poi && !!houses, 'есть POI и номера домов (как в 2ГИС)')
+ok(!!poi && JSON.stringify(poi.layout).includes('name:ru'), 'POI подписаны по-русски')
+
+const light = lightFor(225, 42, 'dark')
+ok(light.anchor === 'map' && (light.position as number[])[1] === 225, 'солнце привязано к карте и к азимуту')
+ok(JSON.stringify(lightFor(225, -5, 'dark')).includes('0.28'), 'ночью свет мягче')
+ok(JSON.stringify(buildStyle('carto-dark', 'dark')).includes('"anchor":"map"'), 'свет задан в самом стиле')
+
+ok(infoForBuilding({ render_height: 27 })!.floors === 9, '27 м ≈ 9 этажей')
+ok(infoForBuilding({ height: 3.2 })!.floors === 1, 'низкое строение — 1 этаж')
+ok(infoForBuilding({ 'building:levels': 5 })!.height === 15.75, 'этажи → метры, если высоты нет')
+ok(infoForBuilding(null) === null, 'без данных дом не подписывается')
+ok(pluralFloors(1) === 'этаж' && pluralFloors(3) === 'этажа' && pluralFloors(11) === 'этажей', 'склонение «этаж/этажа/этажей»')
+ok(describeBuilding({ render_height: 30 })!.startsWith('Дом · ≈ 10 этажей'), 'подпись дома: этажи и метры')
+ok(describeBuilding({ render_height: 30, name: 'Ратуша' })!.startsWith('Ратуша ·'), 'имя дома, если оно есть в тайлах')
 
 /* ------------------------------------------------------------------ */
 

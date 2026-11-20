@@ -422,6 +422,10 @@ function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }
           <ToggleRow label="Анимация маркеров" checked={settings.animateMarkers} onChange={(v) => patch({ animateMarkers: v })} />
           <ToggleRow label="Кластеризация" checked={settings.cluster} onChange={(v) => patch({ cluster: v })} />
           <ToggleRow label="OSM 3D-здания" checked={settings.osmBuildings} onChange={(v) => patch({ osmBuildings: v })} />
+          <p className="muted -mt-1 px-1 text-[10px] leading-snug">
+            Высоты и этажи — настоящие, из OpenStreetMap. Нажмите на дом на карте, чтобы увидеть
+            «≈ 9 этажей · 28 м».
+          </p>
           <ToggleRow label="Тени по солнцу" checked={layers.shadows} onChange={() => toggleLayer('shadows')} />
           <ToggleRow label="Рельеф (hillshade)" checked={layers.hillshade} onChange={() => toggleLayer('hillshade')} />
           <ToggleRow label="Автосохранение" checked={settings.autoSave} onChange={(v) => patch({ autoSave: v })} />

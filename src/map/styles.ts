@@ -1,6 +1,7 @@
 import type { StyleSpecification } from 'maplibre-gl'
 import type { BaseMapId } from '@/types'
 import { OFFLINE_GLYPHS, VECTOR_ATTRIBUTION, vectorLayers, vectorSources } from './vectorStyle'
+import { DEFAULT_SUN, lightFor } from './realism'
 
 export const GLYPHS_URL = 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf'
 export const FONT_STACK = ['Open Sans Semibold']
@@ -92,6 +93,8 @@ export function buildStyle(id: BaseMapId, theme: 'dark' | 'light'): StyleSpecifi
       name: `MeshMaps · ${id}`,
       glyphs: OFFLINE_GLYPHS,
       sources: { terrain: TERRAIN_SOURCE, ...vectorSources() },
+      // one sun for extrusions; `applyShadows` moves it with the time-of-day slider
+      light: lightFor(DEFAULT_SUN.azimuth, DEFAULT_SUN.altitude, theme),
       layers: vectorLayers(id === 'carto-dark' ? 'dark' : 'light'),
     }
   }

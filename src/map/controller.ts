@@ -6,6 +6,7 @@ import type { StoreState } from '@/store/useStore'
 import { visibleObjects } from '@/store/useStore'
 import { mapIconId, ensureMapIcons, ensureCustomIcons, customIconId } from '@/icons'
 import { fencePanels, objectsToFeatures, sunPosition } from '@/utils/geo'
+import { lightFor } from './realism'
 import { draftFeatureCollection, measureFeatureCollection, routeFeatureCollection } from '@/drawing'
 import { LYR, SRC, applyLayerVisibility, setSourceData } from './layers'
 
@@ -114,7 +115,7 @@ export function applyTerrain(map: MapLibreMap, state: StoreState) {
   try {
     const wants = state.mode === '3d' && state.layers.terrain
     if (wants) {
-      map.setTerrain({ source: 'terrain', exaggeration: 1.25 })
+      map.setTerrain({ source: 'terrain', exaggeration: 1.1 })
     } else {
       map.setTerrain(null)
     }
@@ -153,11 +154,21 @@ export function applyHillshade(map: MapLibreMap, state: StoreState) {
   }
 }
 
+/** Moves the style sun so facades and ground shadows agree (keeps 3D plausible). */
+export function applySunLight(map: MapLibreMap, azimuth: number, altitude: number, theme: 'dark' | 'light') {
+  try {
+    map.setLight(lightFor(azimuth, altitude, theme))
+  } catch {
+    /* raster styles without light support */
+  }
+}
+
 /** Sun-driven shadow direction for the flat shadow layers (idea 38). */
 export function applyShadows(map: MapLibreMap, state: StoreState) {
   const center = map.getCenter()
   const date = new Date(state.settings.sunDate || Date.now())
   const { azimuth, altitude } = sunPosition(date, center.lat, center.lng)
+  applySunLight(map, azimuth, altitude, state.theme)
   const strength = Math.max(0.05, Math.min(1, (altitude + 6) / 60))
   const len = 2 + (1 - strength) * 16
   const rad = ((azimuth + 180) * Math.PI) / 180
@@ -168,7 +179,11 @@ export function applyShadows(map: MapLibreMap, state: StoreState) {
     map.setPaintProperty(LYR.osmShadow, 'fill-translate', [tx, ty])
     map.setPaintProperty(LYR.bShadow, 'fill-opacity', state.layers.shadows ? 0.12 + strength * 0.22 : 0)
     map.setPaintProperty(LYR.osmShadow, 'fill-opacity', state.layers.shadows ? 0.12 + strength * 0.2 : 0)
-    map.setPaintProperty('mm-building-3d', 'fill-extrusion-opacity', 0.62 + strength * 0.3)
+    map.setPaintProperty(LYR.b3d, 'fill-extrusion-opacity', 0.72 + strength * 0.24)
+    if (map.getLayer('basemap-buildings-3d')) {
+      // real buildings stay solid: see-through walls never look like a real city
+      map.setPaintProperty('basemap-buildings-3d', 'fill-extrusion-opacity', 1)
+    }
   } catch {
     /* layer may not exist yet */
   }
