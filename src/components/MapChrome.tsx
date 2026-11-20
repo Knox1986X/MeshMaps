@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import { useStore } from '@/store/useStore'
 import { mapRegistry } from '@/map/registry'
+import { currentPerf } from '@/perf'
 import { BASEMAPS, attributionFor, buildStyle } from '@/map/styles'
 import { formatCoords, formatDms } from '@/utils/geo'
 import { Icon } from './Icon'
@@ -227,6 +228,7 @@ function MiniMap({ theme }: { theme: 'dark' | 'light' }) {
   useEffect(() => {
     if (!ref.current) return
     const st = useStore.getState()
+    const perf = currentPerf()
     const mini = new maplibregl.Map({
       container: ref.current,
       style: buildStyle(st.basemap === 'blank' ? 'osm' : st.basemap, theme),
@@ -236,6 +238,11 @@ function MiniMap({ theme }: { theme: 'dark' | 'light' }) {
       attributionControl: false,
       dragRotate: false,
       pitchWithRotate: false,
+      // a second WebGL context on a phone must stay as small as possible
+      pixelRatio: 1,
+      fadeDuration: 0,
+      maxTileCacheSize: perf.lite ? 16 : 64,
+      preserveDrawingBuffer: false,
     })
     mapRef.current = mini
     mini.on('load', () => {

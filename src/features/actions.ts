@@ -1,6 +1,7 @@
 import { useStore, createObject, objectStats } from '@/store/useStore'
 import { getCategory } from '@/icons/categories'
 import { mapRegistry } from '@/map/registry'
+import { currentPerf } from '@/perf'
 import {
   formatArea,
   formatDistance,
@@ -58,6 +59,31 @@ export function exportGPX() {
 }
 
 export function exportPNG(withLegend = true) {
+  const map = mapRegistry.main
+  const st = useStore.getState()
+  if (!map) return
+  // Lite mode does not keep a framebuffer copy (it costs a full copy per frame on phones),
+  // so we ask for one fresh frame and read the canvas inside its render callback.
+  if (!currentPerf().preserveDrawingBuffer) {
+    let fired = false
+    const once = () => {
+      if (fired) return
+      fired = true
+      exportPNGNow(withLegend)
+    }
+    map.once('render', once)
+    map.triggerRepaint()
+    window.setTimeout(() => {
+      if (fired) return
+      fired = true
+      exportPNGNow(withLegend)
+    }, 1200)
+    return
+  }
+  exportPNGNow(withLegend)
+}
+
+function exportPNGNow(withLegend = true) {
   const map = mapRegistry.main
   const st = useStore.getState()
   if (!map) return

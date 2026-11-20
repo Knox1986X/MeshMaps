@@ -5,9 +5,12 @@ import App from '@/App'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { isNativeShell } from '@/utils/nativeSave'
 import { installOfflineProtocol } from '@/offline/protocol'
+import { applyPerf } from '@/perf'
 
 // has to run before the first MapLibre instance is created
 installOfflineProtocol()
+// lite/full profile: sets <html data-perf> so CSS can drop the costly blur before first paint
+applyPerf('auto')
 
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>

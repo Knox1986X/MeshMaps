@@ -18,6 +18,7 @@ import type {
 import { CATEGORIES, getCategory } from '@/icons/categories'
 import { geometryArea, geometryLength, haversine, pathLength } from '@/utils/geo'
 import type { PackRow } from '@/db/db'
+import type { PerfMode } from '@/perf'
 import {
   estimateTiles,
   formatBytes,
@@ -75,6 +76,8 @@ export interface Settings {
   osmBuildings: boolean
   autoSave: boolean
   cluster: boolean
+  /** 'auto' picks lite mode on phones, 'full' forces quality, 'lite' forces speed */
+  perf: PerfMode
 }
 
 export interface PendingDraw {
@@ -211,6 +214,7 @@ export const defaultSettings: Settings = {
   osmBuildings: true,
   autoSave: true,
   cluster: true,
+  perf: 'auto',
 }
 
 export function createObject(

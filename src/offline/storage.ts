@@ -124,6 +124,16 @@ export async function downloadPack(
     onProgress({ done, total, bytes })
   }
 
+  // Writing thousands of single-tile transactions kept Android's IDB queue busy and made
+  // the whole UI stutter while a pack downloaded; batch them instead.
+  const BATCH = 32
+  const pending: { key: string; pack: string; blob: Blob; at: number }[] = []
+  const flush = async () => {
+    if (!pending.length) return
+    const rows = pending.splice(0, pending.length)
+    await db.tiles.bulkPut(rows)
+  }
+
   const worker = async () => {
     while (cursor < tiles.length) {
       if (signal.aborted) throw new DOMException('aborted', 'AbortError')
@@ -133,8 +143,9 @@ export async function downloadPack(
       const url = template.replace('{z}', String(t.z)).replace('{x}', String(t.x)).replace('{y}', String(t.y))
       const blob = await fetchTile(url, signal)
       if (blob) {
-        await db.tiles.put({ key, pack: def.id, blob, at: Date.now() })
+        pending.push({ key, pack: def.id, blob, at: Date.now() })
         bytes += blob.size
+        if (pending.length >= BATCH) await flush()
       } else {
         failed += 1
         bytes += AVG_TILE_BYTES / 4
@@ -146,6 +157,7 @@ export async function downloadPack(
 
   const CONCURRENCY = 4
   await Promise.all(Array.from({ length: CONCURRENCY }, worker))
+  await flush()
 
   // fonts as well — otherwise every label turns into a blank box offline
   for (const stack of FONT_STACKS) {
@@ -155,7 +167,10 @@ export async function downloadPack(
       const has = await db.tiles.get(key)
       if (has) continue
       const blob = await fetchTile(fontUrl(stack, range), signal)
-      if (blob) await db.tiles.put({ key, pack: def.id, blob, at: Date.now() })
+      if (blob) {
+        pending.push({ key, pack: def.id, blob, at: Date.now() })
+        await flush()
+      }
     }
   }
 

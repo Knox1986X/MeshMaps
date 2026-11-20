@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import { TopBar } from '@/components/TopBar'
 import { Toolbar } from '@/components/Toolbar'
 import { PropertiesPanel } from '@/components/PropertiesPanel'
@@ -13,6 +13,8 @@ import { usePersistence } from '@/hooks/usePersistence'
 import { useHotkeys } from '@/hooks/useHotkeys'
 import { useFileDrop } from '@/hooks/useFileDrop'
 import { useStore } from '@/store/useStore'
+import { useCompactViewport } from '@/components/ui'
+import { applyPerf, currentPerf } from '@/perf'
 import { mapRegistry } from '@/map/registry'
 
 // The map engine (maplibre-gl) is the heaviest dependency: load it in its own chunk so the
@@ -26,6 +28,19 @@ export default function App() {
   const hydrated = useStore((s) => s.hydrated)
   const split = useStore((s) => s.split)
   const toggleSplit = useStore((s) => s.toggleSplit)
+  const perfMode = useStore((s) => s.settings.perf)
+  const compact = useCompactViewport()
+  // dpr / antialias / drawing buffer can only be set when the map is created, so switching
+  // the profile remounts the canvas (the view is persisted, so nothing jumps)
+  const [lite, setLite] = useState(() => currentPerf().lite)
+  // a second WebGL context on a phone costs GPU memory and is the fastest way to lose the
+  // main map context, so the 3D comparison preview is desktop-only
+  const showPip = split && !compact
+
+  useEffect(() => {
+    const next = applyPerf(perfMode).lite
+    setLite((prev) => (prev === next ? prev : next))
+  }, [perfMode])
 
   useEffect(() => {
     if (!split) return
@@ -34,9 +49,10 @@ export default function App() {
   }, [split])
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="relative h-full w-full overflow-hidden bg-[rgb(var(--bg))]">
       <Suspense fallback={<div className="absolute inset-0 bg-[rgb(var(--bg))]" />}>
-        <MapCanvas />
+        <MapCanvas key={lite ? 'lite' : 'full'} />
       </Suspense>
       <EmptyHint />
       <TopBar />
@@ -51,7 +67,7 @@ export default function App() {
 
       {/* 3D preview window — 2D/3D comparison (idea 37) */}
       <AnimatePresence>
-        {split && (
+        {showPip && (
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -117,5 +133,7 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+    </MotionConfig>
+
   )
 }

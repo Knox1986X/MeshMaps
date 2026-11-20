@@ -26,6 +26,7 @@ import { iconSvg } from '../src/icons'
 import { BASEMAPS, attributionFor, buildStyle, isVectorBasemap, sampleTileUrl } from '../src/map/styles'
 import { vectorLayers, vectorSources } from '../src/map/vectorStyle'
 import { describeBuilding, infoForBuilding, lightFor, pluralFloors } from '../src/map/realism'
+import { DEVICE_UNKNOWN, isLiteDevice, perfFor } from '../src/perf'
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
 import {
   CITIES,
@@ -338,6 +339,25 @@ ok(infoForBuilding(null) === null, 'без данных дом не подпис
 ok(pluralFloors(1) === 'этаж' && pluralFloors(3) === 'этажа' && pluralFloors(11) === 'этажей', 'склонение «этаж/этажа/этажей»')
 ok(describeBuilding({ render_height: 30 })!.startsWith('Дом · ≈ 10 этажей'), 'подпись дома: этажи и метры')
 ok(describeBuilding({ render_height: 30, name: 'Ратуша' })!.startsWith('Ратуша ·'), 'имя дома, если оно есть в тайлах')
+
+/* ---------------- производительность: профиль устройства ---------------- */
+
+const phone = { dpr: 3, cores: 4, memory: 2, coarsePointer: true, width: 390, reducedMotion: false }
+ok(isLiteDevice(phone), 'телефон определяется как слабое устройство')
+ok(!isLiteDevice({ ...DEVICE_UNKNOWN }), 'ноутбук остаётся в полном профиле')
+ok(perfFor('auto', { ...DEVICE_UNKNOWN, width: 760 }).lite, 'узкое окно тоже уходит в lite')
+
+const lite = perfFor('auto', phone)
+ok(lite.lite && lite.dpr === 1.5, 'на телефоне разрешение карты ограничено 1.5x')
+ok(!lite.antialias && lite.fadeDuration === 0, 'lite: без MSAA и без плавных подмешиваний тайлов')
+ok(!lite.preserveDrawingBuffer, 'lite: без копии кадра (PNG берёт свежий кадр по запросу)')
+ok(!lite.blur, 'lite: размытие панелей выключено')
+ok(!lite.hover && !lite.terrainByDefault, 'lite: без hover-запросов и без рельефа по умолчанию')
+
+const full = perfFor('full', phone)
+ok(!full.lite && full.dpr === 2, '«Максимум» рисует в 2x даже на телефоне')
+ok(full.preserveDrawingBuffer && full.antialias && full.blur, '«Максимум» возвращает качество')
+ok(perfFor('lite', DEVICE_UNKNOWN).lite, '«Экономия» включается принудительно')
 
 /* ------------------------------------------------------------------ */
 

@@ -7,9 +7,11 @@ import type { MapObject } from '@/types'
 import { getCategory } from '@/icons/categories'
 import { buildStyle, isVectorBasemap } from '@/map/styles'
 import { describeBuilding } from '@/map/realism'
+import { currentPerf } from '@/perf'
 import { isBasemapReachable } from '@/map/basemapProbe'
 import { addMeshLayers, CLICK_LAYERS, HIT_LAYERS, SRC, setSourceData } from '@/map/layers'
 import {
+  applyAux,
   applyData,
   applyHillshade,
   applyShadows,
@@ -51,6 +53,7 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
     if (!containerRef.current) return
     const st = useStore.getState()
 
+    const perf = currentPerf()
     let map: MapLibreMap
     try {
       map = new maplibregl.Map({
@@ -64,10 +67,14 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
         attributionControl: false,
         // PNG-экспорт читает канвас, поэтому буфер сохраняем — но DPR ограничиваем:
         // на телефоне devicePixelRatio 3 означает 9x пикселей и заметные подтормаживания.
-        preserveDrawingBuffer: true,
-        pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-        antialias: (window.devicePixelRatio || 1) <= 1.5,
-        fadeDuration: 140,
+        // both options are pure GPU cost: the framebuffer copy and MSAA. Lite mode trades
+        // them for a smooth pan on phones, and PNG export asks for a fresh frame instead.
+        preserveDrawingBuffer: variant === 'pip' ? false : perf.preserveDrawingBuffer,
+        pixelRatio: variant === 'pip' ? 1 : perf.dpr,
+        antialias: variant === 'pip' ? false : perf.antialias,
+        fadeDuration: perf.fadeDuration,
+        maxTileCacheSize: perf.maxTileCacheSize,
+        refreshExpiredTiles: perf.refreshExpiredTiles,
         dragRotate: true,
         keyboard: false,
       })
@@ -198,6 +205,8 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
     if (variant === 'main') {
       // mousemove fires ~120 times per second on a trackpad; writing every event into the
       // store re-rendered the whole UI (that is what made the app feel frozen).
+      // On touch devices MapLibre also fires mousemove while panning — a full
+      // queryRenderedFeatures + DOM popup there is what made the phone stutter.
       let lastCursor = 0
       let lastHover = 0
       map.on('mousemove', (e) => {
@@ -205,7 +214,7 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
         const now = performance.now()
         const tool = s.tool
         const drawing = DRAW_TOOLS.includes(tool)
-        if (now - lastCursor > 90) {
+        if (perf.hover && now - lastCursor > perf.cursorThrottle) {
           lastCursor = now
           s.setCursor([e.lngLat.lng, e.lngLat.lat])
         }
@@ -218,7 +227,7 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
           )
         }
         map.getCanvas().style.cursor = drawing ? 'crosshair' : 'grab'
-        if (drawing) return
+        if (drawing || !perf.hover) return
         if (now - lastHover < 110) return
         lastHover = now
 
@@ -357,7 +366,19 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
         })
       })
 
-      map.getCanvas().addEventListener('webglcontextlost', (ev) => ev.preventDefault())
+      // Android can drop the GPU context under memory pressure. Preventing the default keeps
+      // the map alive; the restore listener repaints it instead of leaving a frozen canvas.
+      map.getCanvas().addEventListener('webglcontextlost', (ev) => {
+        ev.preventDefault()
+        useStore.getState().toast('warn', 'Графика перезагружается…')
+      })
+      map.getCanvas().addEventListener('webglcontextrestored', () => {
+        try {
+          map.triggerRepaint()
+        } catch {
+          /* map may be disposed */
+        }
+      })
     }
 
     /* ---------------- store subscription ---------------- */
@@ -366,19 +387,20 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
       if (!m) return
       if (!readyRef.current) return
 
-      if (
+      const objectsChanged =
         s.objects !== prev.objects ||
         s.selectedId !== prev.selectedId ||
         s.hoverId !== prev.hoverId ||
         s.year !== prev.year ||
+        s.filters !== prev.filters ||
+        s.sort !== prev.sort
+      const auxChanged =
         s.draft !== prev.draft ||
         s.measure !== prev.measure ||
         s.route !== prev.route ||
-        s.filters !== prev.filters ||
-        s.sort !== prev.sort
-      ) {
-        void applyData(m, s)
-      }
+        s.tool !== prev.tool
+      if (objectsChanged) void applyData(m, s)
+      else if (auxChanged) applyAux(m, s)
       if (s.layers !== prev.layers || s.mode !== prev.mode || s.settings.cluster !== prev.settings.cluster) {
         applyVisibility(m, s)
       }
@@ -422,7 +444,7 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
           popupRef.current = null
         }
       }
-      if (s.theme !== undefined) {
+      if (s.tool !== prev.tool) {
         map.getCanvas().style.cursor = DRAW_TOOLS.includes(s.tool) ? 'crosshair' : 'grab'
       }
     })

@@ -380,3 +380,56 @@
   max-width: calc(100vw - 16px);
   max-height: calc(100dvh - 16px);
 }
+
+/* ------------------------------------------------------------------ */
+/* lite profile — phones and low-end GPUs                              */
+/*                                                                    */
+/* A backdrop-filter over a WebGL canvas forces the compositor to     */
+/* read the surface back and blur it on every frame: that is the      */
+/* single biggest source of stutter on Android. Lite mode swaps the   */
+/* blur for a near-solid panel, keeps the same look and colours.      */
+/* ------------------------------------------------------------------ */
+
+html[data-perf='lite'] {
+  --blur: 0px;
+  --shadow: 0 10px 22px -14px rgba(0, 0, 0, 0.72);
+}
+
+html[data-perf='lite'] .panel,
+html[data-perf='lite'] .panel-solid {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgb(var(--glass) / 0.94);
+  box-shadow: var(--shadow);
+}
+
+html[data-perf='lite'] .panel-solid {
+  background: rgb(var(--glass-strong) / 0.97);
+}
+
+html[data-perf='lite'] .maplibregl-ctrl-attrib,
+html[data-perf='lite'] .popover-scrim,
+html[data-perf='lite'] .maplibregl-popup-content {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-perf='lite'] .popover-scrim {
+  background: rgba(3, 7, 15, 0.72);
+}
+
+/* shorter, cheaper transitions: motion is still there, just no 300 ms re-rasterisation */
+html[data-perf='lite'] .btn,
+html[data-perf='lite'] .tool-btn,
+html[data-perf='lite'] .chip {
+  transition-duration: 120ms;
+}
+
+html[data-perf='lite'] .leaf-dot {
+  background-image: none;
+}
+
+/* shadow-glow is a big soft blur painted around the logo every frame */
+html[data-perf='lite'] .shadow-glow {
+  box-shadow: none;
+}

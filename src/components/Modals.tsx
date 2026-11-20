@@ -5,6 +5,7 @@ import { CATEGORIES, FENCE_TYPES, getCategory } from '@/icons/categories'
 import { MapIcon } from '@/icons'
 import { Icon } from './Icon'
 import { Empty, Modal, Segmented, Slider, Switch } from './ui'
+import type { PerfMode } from '@/perf'
 import { BASEMAPS } from '@/map/styles'
 import { addSnapshot, db, listSnapshots, kvGet, kvSet, replaceAll } from '@/db/db'
 import type { BaseMapId, LayerVisibility, Snapshot } from '@/types'
@@ -429,6 +430,25 @@ function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }
           <ToggleRow label="Тени по солнцу" checked={layers.shadows} onChange={() => toggleLayer('shadows')} />
           <ToggleRow label="Рельеф (hillshade)" checked={layers.hillshade} onChange={() => toggleLayer('hillshade')} />
           <ToggleRow label="Автосохранение" checked={settings.autoSave} onChange={(v) => patch({ autoSave: v })} />
+        </section>
+
+        <section>
+          <SectionLabel>Скорость и ресурсы</SectionLabel>
+          <Segmented
+            value={settings.perf}
+            onChange={(v) => patch({ perf: v as PerfMode })}
+            options={[
+              { id: 'auto', label: 'Авто' },
+              { id: 'lite', label: 'Экономия' },
+              { id: 'full', label: 'Максимум' },
+            ]}
+          />
+          <p className="muted mt-1 text-[10px] leading-snug">
+            «Авто» на телефоне включает режим экономии: панели без размытия, карта рисуется в меньшем
+            разрешении, рельеф выключен. Интерфейс и функции те же — только плавнее. Карта
+            перезагрузится после смены режима.
+          </p>
+          <ToggleRow label="3D-рельеф (высоты местности)" checked={layers.terrain} onChange={() => toggleLayer('terrain')} />
         </section>
 
         <section>

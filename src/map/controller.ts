@@ -190,6 +190,30 @@ export function applyShadows(map: MapLibreMap, state: StoreState) {
 }
 
 /**
+ * Only the transient drawing sources (draft geometry, measurement, route preview).
+ *
+ * While a line or polygon is being drawn the draft changes on every pointer move; rebuilding
+ * every object source at 18 Hz is what made drawing feel sticky on a phone.
+ */
+export function applyAux(map: MapLibreMap, state: StoreState) {
+  setSourceData(map, SRC.draft, draftFeatureCollection(state.draft))
+  setSourceData(
+    map,
+    SRC.measure,
+    state.tool === 'measure-distance' || state.tool === 'measure-area'
+      ? measureFeatureCollection(state.measure.points, state.tool === 'measure-area')
+      : featureCollection([]),
+  )
+  setSourceData(
+    map,
+    SRC.route,
+    state.tool === 'route'
+      ? routeFeatureCollection(state.route.points, state.route.result?.coordinates)
+      : featureCollection([]),
+  )
+}
+
+/**
  * 3D buildings that come from the vector basemap (OpenFreeMap): real OSM heights,
  * no Overpass request, and they work from an offline pack. Only the vector styles
  * have these layers, so every call is guarded.

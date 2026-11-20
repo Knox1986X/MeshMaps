@@ -4,6 +4,7 @@ import { kvGet, kvSet, loadObjects, replaceAll, syncObjectChanges } from '@/db/d
 import { seedObjects } from '@/db/seed'
 import { parseShareHash } from '@/utils/share'
 import type { BaseMapId, LayerVisibility, MapViewState, ViewMode } from '@/types'
+import { currentPerf } from '@/perf'
 
 export const defaultLayers: LayerVisibility = {
   basemap: true,
@@ -20,6 +21,14 @@ export const defaultLayers: LayerVisibility = {
   buffers: true,
 }
 
+/**
+ * Terrain pulls DEM tiles and a mesh on every 3D view — fine on a laptop, expensive on a
+ * phone. Lite mode starts with it off; the toggle in settings still turns it on.
+ */
+export function layersForDevice(): LayerVisibility {
+  return currentPerf().terrainByDefault ? { ...defaultLayers } : { ...defaultLayers, terrain: false, hillshade: false }
+}
+
 /** Load from IndexedDB on boot, then keep everything in sync. */
 export function usePersistence() {
   useEffect(() => {
@@ -31,7 +40,7 @@ export function usePersistence() {
           kvGet<'dark' | 'light'>('theme', 'dark'),
           kvGet<MapViewState | null>('view', null),
           kvGet('settings', defaultSettings),
-          kvGet<LayerVisibility>('layers', defaultLayers),
+          kvGet<LayerVisibility>('layers', layersForDevice()),
           kvGet<BaseMapId>('basemap', 'carto-dark'),
           kvGet<ViewMode>('mode', '2d'),
           kvGet<boolean>('seeded', false),
@@ -53,7 +62,7 @@ export function usePersistence() {
           theme: finalTheme,
           view: { ...(view ?? useStore.getState().view), ...(share.view ?? {}) },
           settings: { ...defaultSettings, ...(settings ?? {}) },
-          layers: { ...defaultLayers, ...(layers ?? {}) },
+          layers: { ...layersForDevice(), ...(layers ?? {}) },
           basemap: (share.basemap as BaseMapId) ?? basemap,
           mode: share.mode ?? mode,
           selectedId: share.selectedId ?? null,
@@ -113,21 +122,23 @@ export function usePersistence() {
           return
         }
         try {
-          if (s.objects !== p.objects && s.settings.autoSave) await syncObjectChanges(s.objects, p.objects)
-          await Promise.all([
-            kvSet('settings', s.settings),
-            kvSet('view', s.view),
-            kvSet('theme', s.theme),
-            kvSet('layers', s.layers),
-            kvSet('basemap', s.basemap),
-            kvSet('mode', s.mode),
-          ])
+          // write only what actually changed: panning used to rewrite six keys every
+          // time the map stopped moving
+          const jobs: Promise<unknown>[] = []
+          if (s.objects !== p.objects && s.settings.autoSave) jobs.push(syncObjectChanges(s.objects, p.objects))
+          if (s.settings !== p.settings) jobs.push(kvSet('settings', s.settings))
+          if (s.view !== p.view) jobs.push(kvSet('view', s.view))
+          if (s.theme !== p.theme) jobs.push(kvSet('theme', s.theme))
+          if (s.layers !== p.layers) jobs.push(kvSet('layers', s.layers))
+          if (s.basemap !== p.basemap) jobs.push(kvSet('basemap', s.basemap))
+          if (s.mode !== p.mode) jobs.push(kvSet('mode', s.mode))
+          await Promise.all(jobs)
           useStore.getState().setSaveState('saved')
         } catch (err) {
           console.error('save failed', err)
           useStore.getState().toast('error', 'Ошибка сохранения в IndexedDB')
         }
-      }, 850)
+      }, 1100)
     })
     return () => {
       window.clearTimeout(timer)

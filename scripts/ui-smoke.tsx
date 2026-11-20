@@ -220,6 +220,22 @@ async function main() {
   useStore.getState().setOfflineOpen(false)
   await new Promise((r) => setTimeout(r, 200))
 
+  /* performance profile in settings */
+  useStore.getState().setModal('settings')
+  await new Promise((r) => setTimeout(r, 240))
+  const settingsHtml = rootEl.innerHTML
+  ok(settingsHtml.includes('Скорость и ресурсы'), 'в настройках есть раздел «Скорость и ресурсы»')
+  ok(settingsHtml.includes('Экономия') && settingsHtml.includes('Максимум'), 'три режима производительности на выбор')
+  ok(settingsHtml.includes('3D-рельеф'), 'рельеф можно выключить вручную')
+  useStore.getState().patchSettings({ perf: 'lite' })
+  await new Promise((r) => setTimeout(r, 240))
+  ok(document.documentElement.dataset.perf === 'lite', 'data-perf=lite включает CSS без размытия')
+  useStore.getState().patchSettings({ perf: 'full' })
+  await new Promise((r) => setTimeout(r, 240))
+  ok(document.documentElement.dataset.perf === 'full', 'data-perf=full возвращает размытие')
+  useStore.getState().setModal(null)
+  await new Promise((r) => setTimeout(r, 200))
+
   /* mobile layout: search overlay + bottom-sheet popovers */
   mobileMode = true
   const { TopBar } = await import('../src/components/TopBar')
