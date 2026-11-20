@@ -15,7 +15,7 @@ import type {
   ToolId,
   ViewMode,
 } from '@/types'
-import { getCategory } from '@/icons/categories'
+import { CATEGORIES, getCategory } from '@/icons/categories'
 import { geometryArea, geometryLength, haversine, pathLength } from '@/utils/geo'
 
 export type Locale = 'ru' | 'en'
@@ -361,6 +361,7 @@ export const useStore = create<StoreState>((set, get) => ({
   setTool: (tool) => {
     const kindMap: Record<string, Draft['kind'] | undefined> = {
       point: 'point',
+      buffer: 'point',
       line: 'line',
       polygon: 'polygon',
       building: 'building',
@@ -370,10 +371,37 @@ export const useStore = create<StoreState>((set, get) => ({
       route: 'route',
     }
     const kind = kindMap[tool]
-    set({
-      tool,
-      draft: kind ? { kind, coords: [], hover: null } : null,
-      measure: { points: [], result: null },
+    set((s) => {
+      let pending = s.pending
+      if (kind === 'point' || kind === 'line' || kind === 'polygon' || kind === 'building' || kind === 'fence') {
+        const valid = CATEGORIES.filter((c) => c.kind === kind).map((c) => c.id)
+        const fallback: Record<string, string> = {
+          point: 'poi',
+          line: 'trail',
+          polygon: 'nature',
+          building: 'building',
+          fence: 'fence',
+        }
+        const category = valid.includes(pending.category) ? pending.category : fallback[kind]
+        // keep the height meaningful per tool: fences are 2 m, buildings ~12 m
+        const height =
+          kind === 'fence'
+            ? pending.height > 8 || pending.height < 0.5
+              ? 2
+              : pending.height
+            : kind === 'building'
+              ? pending.height < 4
+                ? 12
+                : pending.height
+              : pending.height
+        pending = { ...pending, category, height }
+      }
+      return {
+        tool,
+        pending,
+        draft: kind ? { kind, coords: [], hover: null } : null,
+        measure: { points: [], result: null },
+      }
     })
   },
 

@@ -1,0 +1,193 @@
+/**
+ * Headless UI smoke test: mounts the whole React tree inside jsdom.
+ * WebGL is unavailable here, so MapCanvas is expected to show its fallback —
+ * everything else (panels, store wiring, effects) must render without errors.
+ *   npm run test:ui
+ */
+import { JSDOM } from 'jsdom'
+
+const dom = new JSDOM('<!doctype html><html data-theme="dark"><body><div id="root"></div></body></html>', {
+  url: 'https://meshmaps.app/',
+  pretendToBeVisual: true,
+})
+
+const g = globalThis as unknown as Record<string, unknown>
+const w = dom.window as unknown as Record<string, unknown>
+
+const raf = (cb: FrameRequestCallback) => setTimeout(() => cb(Date.now()), 16) as unknown as number
+const caf = (id: number) => clearTimeout(id)
+
+g.window = dom.window
+g.document = dom.window.document
+try {
+  Object.defineProperty(g, 'navigator', { value: dom.window.navigator, configurable: true, writable: true })
+} catch {
+  /* node 22 exposes a getter-only navigator */
+}
+g.HTMLElement = dom.window.HTMLElement
+g.Element = dom.window.Element
+g.Node = dom.window.Node
+g.SVGElement = dom.window.SVGElement
+g.CustomEvent = dom.window.CustomEvent
+g.Event = dom.window.Event
+g.MouseEvent = dom.window.MouseEvent
+g.KeyboardEvent = dom.window.KeyboardEvent
+g.DOMParser = dom.window.DOMParser
+g.getComputedStyle = dom.window.getComputedStyle.bind(dom.window)
+g.requestAnimationFrame = raf
+g.cancelAnimationFrame = caf
+w.requestAnimationFrame = raf
+w.cancelAnimationFrame = caf
+g.localStorage = dom.window.localStorage
+g.Image = dom.window.Image
+g.HTMLCanvasElement = dom.window.HTMLCanvasElement
+g.matchMedia = (query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: () => {},
+  removeListener: () => {},
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  dispatchEvent: () => false,
+})
+w.matchMedia = g.matchMedia
+g.devicePixelRatio = 1
+w.devicePixelRatio = 1
+g.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+w.ResizeObserver = g.ResizeObserver
+g.IntersectionObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return []
+  }
+}
+// maplibre-gl touches these at module init
+const URLshim = dom.window.URL as unknown as {
+  createObjectURL?: () => string
+  revokeObjectURL?: () => void
+}
+URLshim.createObjectURL = () => 'blob:mock'
+URLshim.revokeObjectURL = () => {}
+g.URL = dom.window.URL
+w.URL = dom.window.URL
+g.Worker = class {
+  postMessage() {}
+  terminate() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+w.Worker = g.Worker
+
+if (!(dom.window as unknown as { crypto?: unknown }).crypto) {
+  g.crypto = globalThis.crypto
+}
+
+// canvas / WebGL is not implemented in jsdom
+dom.window.HTMLCanvasElement.prototype.getContext = function () {
+  return null
+} as unknown as typeof dom.window.HTMLCanvasElement.prototype.getContext
+
+let failures = 0
+let checks = 0
+const ok = (cond: unknown, label: string, extra?: unknown) => {
+  checks++
+  if (cond) console.log(`✓ ${label}`)
+  else {
+    failures++
+    console.error(`✗ ${label}`, extra ?? '')
+  }
+}
+
+const errors: string[] = []
+const realError = console.error
+console.error = (...args: unknown[]) => {
+  const text = args.map((a) => (a instanceof Error ? a.message : String(a))).join(' ')
+  errors.push(text)
+}
+
+async function main() {
+  const React = await import('react')
+  const { createRoot } = await import('react-dom/client')
+  const { default: App } = await import('../src/App')
+  const { ErrorBoundary } = await import('../src/components/ErrorBoundary')
+  const { useStore } = await import('../src/store/useStore')
+
+  const rootEl = document.getElementById('root')!
+  const root = createRoot(rootEl)
+  root.render(React.createElement(ErrorBoundary, null, React.createElement(App)))
+  await new Promise((r) => setTimeout(r, 900))
+
+  const html = rootEl.innerHTML
+  console.error = realError
+
+  ok(html.length > 4000, `дерево отрендерено (${html.length} символов)`)
+  ok(html.includes('MeshMaps'), 'бренд в верхней панели')
+  ok(html.includes('Поиск адреса'), 'поле поиска отрисовано')
+  ok(html.includes('2D') && html.includes('3D'), 'переключатель 2D/3D')
+  ok((html.match(/tool-btn/g) ?? []).length >= 10, 'панель инструментов: 10+ кнопок')
+  ok(html.includes('Карта не запустилась'), 'graceful fallback без WebGL')
+  ok(html.includes('55.75') || html.includes('37.62'), 'координаты в статус-баре')
+  ok(!html.includes('Что-то пошло не так'), 'ErrorBoundary не сработал')
+
+  ok(useStore.getState().hydrated, 'store гидратирован')
+  ok(useStore.getState().objects.length >= 12, `демо-данные загружены (${useStore.getState().objects.length})`)
+
+  // interaction: switch tool, open drawer, select object, search filter
+  useStore.getState().setTool('point')
+  await new Promise((r) => setTimeout(r, 60))
+  ok(useStore.getState().draft?.kind === 'point', 'инструмент «точка» активирует draft')
+  ok(rootEl.innerHTML.includes('Кликайте по карте'), 'подсказка рисования появилась')
+
+  useStore.getState().setTool('fence')
+  useStore.getState().setBottomOpen(true)
+  await new Promise((r) => setTimeout(r, 120))
+  ok(useStore.getState().tool === 'fence', 'переключение на инструмент ограждения')
+  ok(rootEl.innerHTML.includes('Объекты'), 'нижняя панель объектов открыта')
+
+  const first = useStore.getState().objects[0]
+  useStore.getState().select(first.id)
+  await new Promise((r) => setTimeout(r, 150))
+  ok(rootEl.innerHTML.includes('Геометрия') && rootEl.innerHTML.includes('Свойства'), 'панель свойств открылась')
+  ok(rootEl.innerHTML.includes(first.name.slice(0, 12)), 'имя выбранного объекта в панели')
+
+  useStore.getState().setFilter({ query: 'кофейня' })
+  await new Promise((r) => setTimeout(r, 80))
+  ok(useStore.getState().filters.query === 'кофейня', 'фильтр поиска записан')
+
+  useStore.getState().setMode('3d')
+  useStore.getState().toggleTheme()
+  await new Promise((r) => setTimeout(r, 120))
+  ok(useStore.getState().mode === '3d', '3D-режим включается')
+  ok(useStore.getState().theme === 'light', 'тема переключается')
+  ok(document.documentElement.dataset.theme === 'light', 'data-theme обновлён для CSS-токенов')
+
+  useStore.getState().setModal('legend')
+  await new Promise((r) => setTimeout(r, 200))
+  ok(rootEl.innerHTML.includes('Легенда') && rootEl.innerHTML.includes('Типы ограждений'), 'модалка легенды открывается')
+  useStore.getState().setModal(null)
+  await new Promise((r) => setTimeout(r, 200))
+
+  const realErrors = errors.filter(
+    (e) =>
+      !/WebGL|not implemented|getContext|maplibre|Failed to fetch|IndexedDB|indexedDB|IDB|Dexie/i.test(e) &&
+      !/validateDOMNesting|findDOMNode|devicePixelRatio/i.test(e),
+  )
+  ok(realErrors.length === 0, 'нет ошибок React в консоли', realErrors.slice(0, 3))
+
+  root.unmount()
+  console.log(`\n${failures === 0 ? '✅' : '❌'} ${checks - failures}/${checks} UI-проверок пройдено`)
+  if (failures) process.exit(1)
+}
+
+main().catch((err) => {
+  console.error = realError
+  console.error('ui-smoke failed:', err)
+  process.exit(1)
+})

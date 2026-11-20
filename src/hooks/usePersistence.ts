@@ -85,6 +85,10 @@ export function usePersistence() {
       if (!relevant) return
       window.clearTimeout(timer)
       timer = window.setTimeout(async () => {
+        if (typeof indexedDB === 'undefined') {
+          useStore.getState().setSaveState('saved')
+          return
+        }
         try {
           if (s.objects !== p.objects && s.settings.autoSave) await replaceAll(s.objects)
           await Promise.all([

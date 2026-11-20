@@ -217,6 +217,15 @@ ok(filtered.length === 3, 'фильтр по нескольким категор
 const searched = visibleObjects({ ...useStore.getState(), filters: { categories: [], tags: [], query: 'кофейня', onlyPinned: false } })
 ok(searched.length === 1, 'поиск по имени работает')
 
+// tool switching normalises the pending category / height
+useStore.getState().setTool('line')
+ok(useStore.getState().pending.category === 'trail', 'инструмент «линия» ставит категорию trail')
+useStore.getState().setTool('fence')
+ok(useStore.getState().pending.category === 'fence', 'инструмент «ограждение» ставит категорию fence')
+ok(useStore.getState().pending.height === 2, 'высота забора по умолчанию 2 м')
+useStore.getState().setTool('building')
+ok(useStore.getState().pending.height === 12, 'высота здания по умолчанию 12 м')
+
 const tpl = createObject({ type: 'building', geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } })
 ok(tpl.type === 'building' && tpl.color.length === 7, 'createObject проставляет цвет и тип')
 

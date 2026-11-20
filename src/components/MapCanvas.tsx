@@ -41,12 +41,15 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
   const popupRef = useRef<Popup | null>(null)
   const hoverPopupRef = useRef<Popup | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const [fatal, setFatal] = useState<string | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
     const st = useStore.getState()
 
-    const map = new maplibregl.Map({
+    let map: MapLibreMap
+    try {
+      map = new maplibregl.Map({
       container: containerRef.current,
       style: buildStyle(st.basemap, st.theme),
       center: st.view.center,
@@ -59,8 +62,13 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
       antialias: true,
       fadeDuration: 140,
       dragRotate: true,
-      keyboard: false,
-    })
+        keyboard: false,
+      })
+    } catch (err) {
+      console.error('map init failed', err)
+      setFatal(err instanceof Error ? err.message : 'WebGL недоступен')
+      return
+    }
     mapRef.current = map
     if (variant === 'pip') mapRegistry.pip = map
     else mapRegistry.main = map
@@ -495,6 +503,18 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
   return (
     <div className={variant === 'pip' ? 'absolute inset-0' : 'absolute inset-0'}>
       <div ref={containerRef} className="absolute inset-0" />
+      {fatal && (
+        <div className="absolute inset-0 flex items-center justify-center p-6">
+          <div className="panel-solid max-w-[420px] p-5 text-center">
+            <div className="mb-1 text-[13.5px] font-semibold">Карта не запустилась</div>
+            <p className="muted mb-2 text-[11.5px] leading-relaxed">
+              Похоже, браузер не даёт доступ к WebGL. Включите аппаратное ускорение или откройте приложение в
+              другом браузере — разметка при этом сохраняется локально.
+            </p>
+            <pre className="rounded-lg bg-black/40 p-2 text-left font-mono text-[10px] text-[#f87171]">{fatal}</pre>
+          </div>
+        </div>
+      )}
       {menu && (
         <>
           <div className="absolute inset-0 z-20" onClick={() => setMenu(null)} onContextMenu={(e) => e.preventDefault()} />
