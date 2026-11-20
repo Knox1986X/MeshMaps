@@ -4,7 +4,7 @@ import { BASEMAPS } from '@/map/styles'
 import type { BaseMapId, LayerVisibility } from '@/types'
 import { Icon } from './Icon'
 import { SearchBox } from './SearchBox'
-import { IconButton, Popover, Segmented } from './ui'
+import { IconButton, Popover, Segmented, useCompactViewport } from './ui'
 import { copyShareLink, exportGeoJSON, exportGPX, exportPNG, importFile, importOsmArea, openReport } from '@/features/actions'
 
 export function TopBar() {
@@ -26,6 +26,8 @@ export function TopBar() {
   const saveState = useStore((s) => s.saveState)
   const split = useStore((s) => s.split)
   const toggleSplit = useStore((s) => s.toggleSplit)
+  const [mobileSearch, setMobileSearch] = useState(false)
+  const compact = useCompactViewport()
   const [fileInput] = useState(() => {
     const el = document.createElement('input')
     el.type = 'file'
@@ -58,15 +60,31 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* search */}
-      <div className="pointer-events-auto w-full max-w-[420px] min-w-0">
-        <SearchBox />
-      </div>
+      {/* search: inline on desktop, full-width overlay on phones */}
+      {!compact && (
+        <div className="pointer-events-auto w-full max-w-[420px] min-w-0">
+          <SearchBox />
+        </div>
+      )}
+
+      {compact && mobileSearch && (
+        <div className="pointer-events-auto absolute inset-x-2.5 top-2.5 z-[70]">
+          <SearchBox autoFocus onClose={() => setMobileSearch(false)} />
+        </div>
+      )}
 
       <div className="flex-1" />
 
       {/* actions */}
       <div className="panel pointer-events-auto flex h-11 shrink-0 items-center gap-0.5 px-1">
+        <button
+          className="tool-btn h-9 w-9 sm:hidden"
+          onClick={() => setMobileSearch(true)}
+          title="Поиск"
+          data-mm-search-open="1"
+        >
+          <Icon name="search" size={16} />
+        </button>
         <div className="hidden sm:block">
           <Segmented
             size="sm"

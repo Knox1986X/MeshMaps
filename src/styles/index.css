@@ -274,3 +274,86 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* mobile sheets — panels never overlap the map controls               */
+/* ------------------------------------------------------------------ */
+
+.popover-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(3, 7, 15, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: scrim-in 0.16s ease-out;
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.popover-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 76dvh;
+  margin: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.popover-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 6px;
+  flex: 0 0 auto;
+}
+
+.popover-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* tool rail must never run under the bottom controls on short screens */
+.tool-rail {
+  max-height: calc(100dvh - 250px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.tool-rail::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-height: 760px) {
+  .tool-rail {
+    max-height: calc(100dvh - 210px);
+  }
+}
+
+@media (max-width: 640px) {
+  .panel,
+  .panel-solid {
+    border-radius: 16px;
+  }
+  /* keep the mobile map readable: no hover-only affordances */
+  .tool-btn {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

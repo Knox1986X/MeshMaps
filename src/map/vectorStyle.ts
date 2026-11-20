@@ -22,6 +22,7 @@ type Palette = {
   civic: string
   water: string
   waterLine: string
+  coast: string
   boundary: string
   boundaryCountry: string
   roadCasing: string
@@ -37,15 +38,18 @@ type Palette = {
 }
 
 const DARK: Palette = {
-  background: '#0a0f16',
-  green: '#101a1b',
-  greenStrong: '#0d1a15',
-  residential: '#101822',
-  commercial: '#131c28',
-  industrial: '#121a23',
-  civic: '#141d29',
-  water: '#0c1a2a',
-  waterLine: '#12263a',
+  // land is a touch lighter than water: at z3–6 the map must still read as a map,
+  // otherwise the whole continent turns into an empty black rectangle
+  background: '#131b25',
+  green: '#16231f',
+  greenStrong: '#122019',
+  residential: '#151e28',
+  commercial: '#18212c',
+  industrial: '#16202a',
+  civic: '#18212e',
+  water: '#081420',
+  waterLine: '#12233a',
+  coast: '#2b4a63',
   boundary: '#26313f',
   boundaryCountry: '#3a4759',
   roadCasing: '#1b2431',
@@ -70,6 +74,7 @@ const LIGHT: Palette = {
   civic: '#e8edf4',
   water: '#cadff4',
   waterLine: '#bcd6ef',
+  coast: '#8fb6d8',
   boundary: '#c3ccda',
   boundaryCountry: '#a9b4c6',
   roadCasing: '#dfe4ec',
@@ -152,6 +157,18 @@ export function vectorLayers(theme: 'dark' | 'light'): LayerSpecification[] {
       ...src,
       'source-layer': 'water',
       paint: { 'fill-color': p.water, 'fill-antialias': true },
+    },
+    {
+      id: 'basemap-coast',
+      type: 'line',
+      ...src,
+      'source-layer': 'water',
+      filter: ['==', ['get', 'class'], 'ocean'],
+      paint: {
+        'line-color': p.coast,
+        'line-width': zoomInterp(2, 0.7, 8, 1.5),
+        'line-opacity': 0.85,
+      },
     },
     {
       id: 'basemap-waterway',
@@ -277,6 +294,56 @@ export function vectorLayers(theme: 'dark' | 'light'): LayerSpecification[] {
       'fill-color': p.building,
       'fill-opacity': zoomInterp(13.5, 0, 15.5, 0.95),
       'fill-outline-color': p.buildingLine,
+    },
+  })
+
+  // country + region labels: without them a wide view looks like an empty canvas
+  layers.push({
+    id: 'basemap-countries',
+    type: 'symbol',
+    ...src,
+    'source-layer': 'place',
+    minzoom: 3,
+    maxzoom: 9,
+    filter: ['==', ['get', 'class'], 'country'],
+    layout: {
+      'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name'], ['get', 'name:en']],
+      'text-font': ['Open Sans Semibold'],
+      'text-size': zoomInterp(3, 11, 8, 15),
+      'text-letter-spacing': 0.14,
+      'text-transform': 'uppercase',
+      'text-max-width': 7,
+      'text-padding': 8,
+    },
+    paint: {
+      'text-color': p.label,
+      'text-halo-color': p.labelHalo,
+      'text-halo-width': 1.4,
+      'text-opacity': 0.82,
+    },
+  })
+
+  layers.push({
+    id: 'basemap-regions',
+    type: 'symbol',
+    ...src,
+    'source-layer': 'place',
+    minzoom: 5,
+    maxzoom: 11,
+    filter: ['==', ['get', 'class'], 'state'],
+    layout: {
+      'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name'], ['get', 'name:en']],
+      'text-font': ['Open Sans Semibold'],
+      'text-size': zoomInterp(5, 9.5, 10, 12.5),
+      'text-letter-spacing': 0.08,
+      'text-max-width': 8,
+      'text-padding': 6,
+    },
+    paint: {
+      'text-color': p.label,
+      'text-halo-color': p.labelHalo,
+      'text-halo-width': 1.2,
+      'text-opacity': 0.6,
     },
   })
 

@@ -1,6 +1,34 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from './Icon'
+
+/**
+ * Narrow viewport (phones / split-screen). Panels that used to be anchored popovers
+ * overlap the tool rail and the map controls there, so they are rendered as a
+ * bottom sheet with a backdrop instead — the tap target is always obvious.
+ */
+export function useCompactViewport(query = '(max-width: 640px)'): boolean {
+  const read = () =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia(query).matches
+      : false
+  const [compact, setCompact] = useState(read)
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia(query)
+    const onChange = () => setCompact(mq.matches)
+    setCompact(mq.matches)
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', onChange)
+      return () => mq.removeEventListener('change', onChange)
+    }
+    // Safari < 14 / old WebView
+    mq.addListener(onChange)
+    return () => mq.removeListener(onChange)
+  }, [query])
+  return compact
+}
 
 /* ------------------------------------------------------------------ */
 /* Popover                                                             */
@@ -12,15 +40,19 @@ export function Popover({
   align = 'right',
   width = 260,
   className,
+  label,
 }: {
   trigger: (open: boolean, toggle: () => void) => ReactNode
   children: (close: () => void) => ReactNode
   align?: 'left' | 'right' | 'center'
   width?: number
   className?: string
+  /** title shown in the mobile bottom sheet */
+  label?: string
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const compact = useCompactViewport()
 
   useEffect(() => {
     if (!open) return
@@ -36,22 +68,53 @@ export function Popover({
     }
   }, [open])
 
+  const close = () => setOpen(false)
+
+  // phones: bottom sheet + backdrop, so nothing overlaps the map controls
+  const sheet =
+    open && compact
+      ? createPortal(
+          <div className="popover-scrim" onClick={close} role="presentation">
+            <motion.div
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 28, opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
+              className={`panel-solid popover-sheet ${className ?? ''}`}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-label={label ?? 'Меню'}
+            >
+              <div className="popover-sheet-head">
+                <span className="muted text-[10px] font-semibold uppercase tracking-wider">{label ?? ''}</span>
+                <button className="tool-btn h-8 w-8" onClick={close} aria-label="Закрыть">
+                  <Icon name="close" size={14} />
+                </button>
+              </div>
+              <div className="popover-sheet-body">{children(close)}</div>
+            </motion.div>
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
     <div className="relative" ref={ref}>
       {trigger(open, () => setOpen((v) => !v))}
+      {sheet}
       <AnimatePresence>
-        {open && (
+        {open && !compact && (
           <motion.div
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.22, 0.61, 0.36, 1] }}
-            className={`panel-solid absolute top-[calc(100%+8px)] z-50 overflow-hidden p-1.5 ${
+            className={`panel-solid absolute top-[calc(100%+8px)] z-50 overflow-y-auto overscroll-contain p-1.5 ${
               align === 'right' ? 'right-0' : align === 'left' ? 'left-0' : 'left-1/2 -translate-x-1/2'
             } ${className ?? ''}`}
-            style={{ width }}
+            style={{ width, maxHeight: 'min(70vh, calc(100dvh - 150px))' }}
           >
-            {children(() => setOpen(false))}
+            {children(close)}
           </motion.div>
         )}
       </AnimatePresence>

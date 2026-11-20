@@ -7,7 +7,15 @@ import { mapRegistry } from '@/map/registry'
 import { parseCoordinateInput } from '@/utils/geo'
 import { Icon } from './Icon'
 
-export function SearchBox() {
+export function SearchBox({
+  autoFocus = false,
+  onClose,
+}: {
+  /** mobile overlay: focus the field as soon as it appears */
+  autoFocus?: boolean
+  /** shown as a ✕ on the right (mobile overlay) */
+  onClose?: () => void
+} = {}) {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const [results, setResults] = useState<SearchResult[]>([])
@@ -17,6 +25,10 @@ export function SearchBox() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const coord = parseCoordinateInput(q)
+
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus()
+  }, [autoFocus])
 
   useEffect(() => {
     if (q.trim().length < 3) {
@@ -68,6 +80,7 @@ export function SearchBox() {
       useStore.getState().requestFlyTo(r.center, 17)
     }
     useStore.getState().toast('info', r.label.slice(0, 70))
+    onClose?.()
   }
 
   const goToCoords = () => {
@@ -75,6 +88,7 @@ export function SearchBox() {
     useStore.getState().requestFlyTo(coord, 17.2)
     setOpen(false)
     useStore.getState().toast('ok', `Переход к ${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}`)
+    onClose?.()
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -133,6 +147,16 @@ export function SearchBox() {
           )
         )}
         <span className="muted hidden shrink-0 font-mono text-[10px] sm:block">⌘K</span>
+        {onClose && (
+          <button
+            className="muted shrink-0 hover:text-[rgb(var(--text))]"
+            onClick={onClose}
+            aria-label="Закрыть поиск"
+            data-mm-search-close="1"
+          >
+            <Icon name="close" size={15} />
+          </button>
+        )}
       </div>
 
       <AnimatePresence>

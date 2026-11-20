@@ -41,8 +41,9 @@ w.cancelAnimationFrame = caf
 g.localStorage = dom.window.localStorage
 g.Image = dom.window.Image
 g.HTMLCanvasElement = dom.window.HTMLCanvasElement
+let mobileMode = false
 g.matchMedia = (query: string) => ({
-  matches: false,
+  matches: mobileMode && /max-width/.test(query),
   media: query,
   onchange: null,
   addListener: () => {},
@@ -208,6 +209,44 @@ async function main() {
   download('meshmaps-test.geojson', '{}', 'application/geo+json')
   await new Promise((r) => setTimeout(r, 60))
   ok(!document.querySelector('[data-mm-native-save]'), 'в браузере панель не появляется (обычное скачивание)')
+
+  /* mobile layout: search overlay + bottom-sheet popovers */
+  mobileMode = true
+  const { TopBar } = await import('../src/components/TopBar')
+  const { Toolbar } = await import('../src/components/Toolbar')
+  const mobileEl = document.createElement('div')
+  document.body.appendChild(mobileEl)
+  const mobileRoot = createRoot(mobileEl)
+  mobileRoot.render(React.createElement(React.Fragment, null, React.createElement(TopBar), React.createElement(Toolbar)))
+  await new Promise((r) => setTimeout(r, 250))
+  const click = (el: Element | null) =>
+    el?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }))
+
+  const searchBtn = mobileEl.querySelector('[data-mm-search-open]')
+  ok(!!searchBtn, 'на телефоне есть кнопка поиска')
+  const inlineSearch = mobileEl.querySelector('#mm-search')
+  ok(!inlineSearch, 'на телефоне поле поиска не сжато в невидимую полоску')
+  click(searchBtn)
+  await new Promise((r) => setTimeout(r, 200))
+  ok(!!mobileEl.querySelector('[data-mm-search-close]'), 'поиск раскрывается на весь экран')
+  ok(!!mobileEl.querySelector('#mm-search'), 'в раскрытом поиске есть поле ввода')
+  click(mobileEl.querySelector('[data-mm-search-close]'))
+  await new Promise((r) => setTimeout(r, 150))
+
+  const sparkles = mobileEl.querySelector('button[title="Шаблоны объектов"]')
+  ok(!!sparkles, 'кнопка шаблонов на месте')
+  click(sparkles)
+  await new Promise((r) => setTimeout(r, 300))
+  const sheet = document.querySelector('.popover-sheet')
+  ok(!!sheet, 'на телефоне панель шаблонов открывается как bottom sheet, а не поверх тулбара')
+  ok(!!sheet?.querySelector('[aria-label="Закрыть"]'), 'у шита есть кнопка закрытия')
+  ok(!!document.querySelector('.popover-scrim'), 'под шитом есть подложка (тап мимо закрывает)')
+  click(document.querySelector('.popover-scrim'))
+  await new Promise((r) => setTimeout(r, 250))
+  ok(!document.querySelector('.popover-sheet'), 'тап по подложке закрывает шит')
+  mobileRoot.unmount()
+  mobileEl.remove()
+  mobileMode = false
 
   const realErrors = errors.filter(
     (e) =>

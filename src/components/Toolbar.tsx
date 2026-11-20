@@ -103,7 +103,7 @@ export function Toolbar() {
   return (
     <>
       <div className="pointer-events-none absolute left-2.5 top-[58px] z-30 flex flex-col gap-2 sm:left-3 sm:top-[66px]">
-        <div className="panel pointer-events-auto flex w-11 flex-col items-center gap-0.5 p-1">
+        <div className="panel tool-rail pointer-events-auto flex w-11 flex-col items-center gap-0.5 p-1">
           {TOOLS.slice(0, 7).map((t) => (
             <ToolButton key={t.id} {...t} active={tool === t.id} onClick={() => setTool(t.id)} />
           ))}
@@ -117,24 +117,34 @@ export function Toolbar() {
           <Popover
             width={252}
             align="left"
+            label="Шаблоны объектов"
             trigger={(open, toggle) => (
               <button className="tool-btn h-9 w-9" data-active={open} onClick={toggle} title="Шаблоны объектов">
                 <Icon name="sparkles" size={16} />
               </button>
             )}
           >
-            {() => (
+            {(close) => (
               <div>
                 <div className="muted px-2 pb-1 pt-1 text-[9.5px] font-semibold uppercase tracking-wider">
                   Шаблоны объектов
                 </div>
                 {TEMPLATES.map((t) => (
                   <div key={t.id} className="flex items-center gap-1 rounded-lg px-1 hover:bg-[rgb(var(--line)/0.08)]">
-                    <button onClick={() => applyTemplate(t.id)} className="flex-1 py-1.5 text-left text-[11.5px]">
+                    <button
+                      onClick={() => {
+                        applyTemplate(t.id)
+                        close()
+                      }}
+                      className="flex-1 py-1.5 text-left text-[11.5px]"
+                    >
                       {t.labelRu}
                     </button>
                     <button
-                      onClick={() => addTemplateHere(t.id)}
+                      onClick={() => {
+                        addTemplateHere(t.id)
+                        close()
+                      }}
                       className="muted rounded-md px-1.5 py-1 text-[10px] hover:text-[rgb(var(--accent-soft))]"
                       title="Добавить в центр карты"
                     >

@@ -36,6 +36,7 @@ export function MapChrome() {
   const setYear = useStore((s) => s.setYear)
   const toast = useStore((s) => s.toast)
   const selectedId = useStore((s) => s.selectedId)
+  const bottomOpen = useStore((s) => s.bottomOpen)
   const [showMini, setShowMini] = useState(false)
   const [showTime, setShowTime] = useState(false)
 
@@ -121,7 +122,12 @@ export function MapChrome() {
             </button>
           </div>
 
-          <div className="panel pointer-events-auto flex flex-col gap-1 px-2.5 py-1.5">
+          {/* coordinates/scale footer hides on phones when the object list is open */}
+          <div
+            className={`panel pointer-events-auto flex flex-col gap-1 px-2.5 py-1.5 ${
+              bottomOpen ? 'max-sm:hidden' : ''
+            }`}
+          >
             <div className="flex items-center gap-2">
               <span className="muted w-[104px] shrink-0 font-mono text-[10.5px]">
                 {cursor ? formatCoords(cursor[0], cursor[1]) : formatCoords(view.center[0], view.center[1])}
@@ -153,8 +159,9 @@ export function MapChrome() {
 
       {/* right-bottom utility rail */}
       <div
-        className="pointer-events-none absolute bottom-2.5 z-20 flex flex-col items-end gap-2 transition-[right] duration-300"
-        style={{ right: selectedId ? 374 : 10 }}
+        className={`pointer-events-none absolute bottom-2.5 right-2.5 z-20 flex flex-col items-end gap-2 transition-[right] duration-300 ${
+          selectedId ? 'sm:right-[374px]' : ''
+        }`}
       >
         <AnimatePresence>
           {showMini && (

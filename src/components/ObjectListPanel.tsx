@@ -4,7 +4,7 @@ import { useStore, objectStats, visibleObjects, type SortKey } from '@/store/use
 import { CATEGORIES, getCategory } from '@/icons/categories'
 import { MapIcon } from '@/icons'
 import { Icon } from './Icon'
-import { Popover, Segmented } from './ui'
+import { Popover, Segmented, useCompactViewport } from './ui'
 import {
   centroidOf,
   formatArea,
@@ -15,6 +15,7 @@ import {
 } from '@/utils/geo'
 
 export function ObjectListPanel() {
+  const compact = useCompactViewport()
   const open = useStore((s) => s.bottomOpen)
   const setOpen = useStore((s) => s.setBottomOpen)
   const objects = useStore((s) => s.objects)
@@ -62,8 +63,15 @@ export function ObjectListPanel() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
           transition={{ duration: 0.26, ease: [0.22, 0.61, 0.36, 1] }}
-          className="pointer-events-auto absolute bottom-2.5 left-[58px] z-30 w-[min(860px,calc(100vw-70px))] sm:left-[62px]"
-          style={{ maxWidth: selectedId ? 'min(700px, calc(100vw - 436px))' : 'min(860px, calc(100vw - 76px))' }}
+          className="pointer-events-auto absolute bottom-2.5 left-2.5 right-2.5 z-40 w-auto sm:left-[62px] sm:right-auto sm:z-30 sm:w-[min(860px,calc(100vw-70px))]"
+          style={{
+            // on phones the sheet spans the free space; the desktop column maths would go negative there
+            maxWidth: compact
+              ? undefined
+              : selectedId
+                ? 'min(700px, calc(100vw - 436px))'
+                : 'min(860px, calc(100vw - 76px))',
+          }}
         >
           <div className="panel flex h-[min(46vh,380px)] flex-col overflow-hidden">
             <div className="flex items-center gap-2 border-b border-[rgb(var(--line)/0.09)] px-3 py-2">
