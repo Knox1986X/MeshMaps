@@ -10,6 +10,7 @@ import {
 } from '@/utils/geo'
 import type { Feature, MapObject } from '@/types'
 import { buildShareUrl } from '@/utils/share'
+import { isNativeShell, presentFileFallback } from '@/utils/nativeSave'
 import { fetchOsmObjects } from '@/api'
 
 /* ------------------------------------------------------------------ */
@@ -18,6 +19,13 @@ import { fetchOsmObjects } from '@/api'
 
 export function download(name: string, data: BlobPart, mime = 'application/octet-stream') {
   const blob = new Blob([data], { type: mime })
+  // Android/iOS shell: no download manager in the WebView, so show the payload instead.
+  // TODO: full version — @capacitor/filesystem + @capacitor/share plugin.
+  if (isNativeShell()) {
+    void presentFileFallback(name, blob, mime)
+    useStore.getState().toast('info', 'Файл готов — сохраните его из панели')
+    return
+  }
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
