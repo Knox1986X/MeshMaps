@@ -95,11 +95,16 @@ npm run dev          # http://localhost:5173
 compileSdk 34) с брендированными иконками и тёмным splash-экраном. Это тот же веб-бандл в нативном
 контейнере: карта, разметка и IndexedDB работают как в браузере, данные хранятся локально на устройстве.
 
-**Получить APK можно тремя способами:**
+**Готовый APK:** [**meshmaps-v0.1.1-debug.apk**](https://github.com/Knox1986X/MeshMaps/releases/download/v0.1.1/meshmaps-v0.1.1-debug.apk)
+(4.3 МБ, собирается CI на каждый тег `v*` и публикуется в [Releases](https://github.com/Knox1986X/MeshMaps/releases/latest)).
+Скачать на телефоне → «Установить» (Android разрешит установку из браузера/файлового менеджера) →
+первый запуск открывает карту с демо-сценой.
+
+**Собрать самому:**
 
 1. **GitHub Actions (без локальной установки)** — workflow `.github/workflows/android.yml` собирает
-   `app-debug.apk` при пуше/вручную: *Actions → Android APK → Run workflow*, затем скачать артефакт
-   `meshmaps-debug-apk` внизу страницы запуска.
+   APK при пуше/вручную: *Actions → Android APK → Run workflow*, затем скачать артефакт
+   `meshmaps-debug-apk` внизу страницы запуска. Пуш тега `v*` дополнительно публикует Release с APK.
 2. **Локально, если есть JDK 17 и Android SDK**:
    ```bash
    npm ci && npm run android:apk
@@ -107,9 +112,9 @@ compileSdk 34) с брендированными иконками и тёмны�
    ```
 3. **Android Studio**: `npm ci && npm run android:sync && npm run android:open` → Run.
 
-> ⚠️ В песочнице, где писался код, **APK скомпилировать невозможно**: нет JDK, Android SDK и Gradle,
-> а доступ к `dl.google.com`/Maven Central закрыт. Поэтому сам `.apk` не приложен — собирать нужно через
-> CI (п. 1) или локально (п. 2/3). Установка подписи release-сборки и Google Play — за пределами MVP.
+> ℹ️ В песочнице, где писался код, APK скомпилировать нельзя (нет JDK/Android SDK/Gradle), поэтому APK
+> собирает GitHub Actions. Это **debug-подпись** — для Google Play нужен собственный keystore и
+> подписанный release-вариант, что за пределами MVP.
 >
 > Без установки APK приложение уже работает как **PWA**: «Установить приложение» в меню браузера
 > (Chrome/Safari) добавляет его на домашний экран, service worker кеширует оболочку и тайлы.

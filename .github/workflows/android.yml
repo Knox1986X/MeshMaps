@@ -72,5 +72,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          gh release view "$TAG" >/dev/null 2>&1 ||             gh release create "$TAG"               --title "MeshMaps ${TAG}"               --notes "Debug APK (Capacitor + MapLibre). Собран из коммита ${GITHUB_SHA}."               --latest
-          gh release upload "$TAG"             "android/app/build/outputs/apk/debug/app-debug.apk#meshmaps-${TAG}-debug.apk"             --clobber
+          ASSET="meshmaps-${TAG}-debug.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$ASSET"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "MeshMaps ${TAG}" --notes "Debug APK (Capacitor + MapLibre), собран из коммита ${GITHUB_SHA}." --latest
+          gh release upload "$TAG" "$ASSET" --clobber
