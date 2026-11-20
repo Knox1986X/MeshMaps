@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0e15" />
+      <stop offset="1" stop-color="#111a26" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4f8cff" />
+      <stop offset="1" stop-color="#a3e635" />
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.04" />
+    </pattern>
+    <style>
+      .p { fill: #121a26; stroke: #ffffff; stroke-opacity: .09; }
+      .t { fill: #e8edf6; font: 500 13px Inter, system-ui, sans-serif; }
+      .s { fill: #8d99aa; font: 400 11px Inter, system-ui, sans-serif; }
+      .m { fill: #6b7a8d; font: 400 10px "JetBrains Mono", monospace; }
+      .chip { fill: #4f8cff; fill-opacity: .18; stroke: #4f8cff; stroke-opacity: .45; }
+    </style>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)" />
+  <rect width="1200" height="720" fill="url(#grid)" />
+
+  <!-- brand -->
+  <rect class="p" x="16" y="14" width="176" height="44" rx="14" />
+  <rect x="24" y="22" width="28" height="28" rx="9" fill="url(#accent)" />
+  <path d="M30 45 L38 27 L46 45 L42 45 L38 35 L34 45 Z" fill="#0b0f16" />
+  <text class="t" x="62" y="35">MeshMaps</text>
+  <text class="s" x="62" y="49">OSM · разметка</text>
+
+  <!-- search -->
+  <rect class="p" x="204" y="14" width="330" height="44" rx="14" />
+  <circle cx="226" cy="36" r="7" fill="none" stroke="#8d99aa" stroke-width="1.6" />
+  <path d="M231 41 L237 47" stroke="#8d99aa" stroke-width="1.6" stroke-linecap="round" />
+  <text class="s" x="246" y="40">Поиск адреса, места или координат…</text>
+
+  <!-- top-right cluster -->
+  <rect class="p" x="700" y="14" width="484" height="44" rx="14" />
+  <rect class="chip" x="710" y="23" width="52" height="26" rx="8" />
+  <text class="t" x="722" y="41">2D</text>
+  <text class="s" x="768" y="41">3D</text>
+  <g fill="none" stroke="#8d99aa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M850 30 h12 v12 h-12 z" opacity=".0" />
+    <circle cx="850" cy="36" r="7" />
+    <path d="M884 29 l5 4 -5 4 M889 33 h9" />
+    <path d="M916 30 a7 7 0 1 0 2 6" />
+    <path d="M950 29 h14 v14 h-14 z" />
+    <path d="M984 33 l6 6 6-6" />
+    <circle cx="1020" cy="36" r="7" />
+  </g>
+  <text class="s" x="1054" y="41">Слои · Экспорт · Ещё</text>
+
+  <!-- toolbar -->
+  <rect class="p" x="16" y="72" width="44" height="420" rx="14" />
+  <g fill="none" stroke="#8d99aa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M29 88 l7 18 2.4-6.6 6.6-2.4z" />
+    <circle cx="38" cy="124" r="3.4" /><circle cx="38" cy="124" r="8" />
+    <path d="M28 160 l6-11 5 7 7-11" />
+    <path d="M38 178 l8.4 5.4-3 10.2H29.6l-3-10.2z" />
+    <path d="M27 222 v13 l8-4 8 4v-13" />
+    <path d="M26 268 h20 M28 262 v20 M38 256 v26 M48 262 v20" />
+    <circle cx="38" cy="310" r="9" /><circle cx="38" cy="310" r="2" />
+    <path d="M26 352 l14-14 6 6-14 14z" />
+    <path d="M26 386 h8 v-8 h8 v8 h8" />
+    <path d="M27 422 h6l4 8 6-14 6 6" />
+  </g>
+
+  <!-- draw options -->
+  <rect class="p" x="70" y="72" width="230" height="300" rx="14" />
+  <text class="s" x="84" y="94">ЧТО РИСУЕМ</text>
+  <g>
+    <g transform="translate(84,104)">
+      <rect x="0" y="0" width="34" height="34" rx="10" fill="#4f8cff" fill-opacity=".9" />
+      <path d="M6 22 L12 8 L26 22 M10 18 h10" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" />
+      <rect x="40" y="0" width="34" height="34" rx="10" fill="#fbbf24" fill-opacity=".9" />
+      <path d="M48 12 h12 l-2 8 h-8z" stroke="#fff" stroke-width="1.6" fill="none" />
+      <rect x="80" y="0" width="34" height="34" rx="10" fill="#22c55e" fill-opacity=".9" />
+      <path d="M97 8 L89 18 h6 l-5 8 13-11 h-6z" fill="#fff" />
+      <rect x="120" y="0" width="34" height="34" rx="10" fill="#a855f7" fill-opacity=".9" />
+      <path d="M126 12 h22 M126 21 h22 M131 8 v20 M141 6 v22 M151 8 v20" stroke="#fff" stroke-width="1.5" />
+      <rect x="0" y="44" width="34" height="34" rx="10" fill="#38bdf8" fill-opacity=".9" />
+      <path d="M17 44 c6 8 9 12 9 16a9 9 0 0 1-18 0c0-4 3-8 9-16z" transform="translate(0,8)" fill="none" stroke="#fff" stroke-width="1.7" />
+      <rect x="40" y="44" width="34" height="34" rx="10" fill="#ef4444" fill-opacity=".9" />
+      <path d="M57 52 l9 16H48z" fill="none" stroke="#fff" stroke-width="1.7" />
+      <rect x="80" y="44" width="34" height="34" rx="10" fill="#14b8a6" fill-opacity=".9" />
+      <path d="M90 58 h14 M97 51 v14" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+      <rect x="120" y="44" width="34" height="34" rx="10" fill="#f97316" fill-opacity=".9" />
+      <path d="M128 54 h14 v6a6 6 0 0 1-12 0z" fill="none" stroke="#fff" stroke-width="1.6" />
+    </g>
+  </g>
+  <text class="s" x="84" y="212">Цвет объекта</text>
+  <g>
+    <circle cx="90" cy="228" r="9" fill="#4f8cff" /><circle cx="114" cy="228" r="9" fill="#38bdf8" />
+    <circle cx="138" cy="228" r="9" fill="#22c55e" /><circle cx="162" cy="228" r="9" fill="#a3e635" />
+    <circle cx="186" cy="228" r="9" fill="#fbbf24" /><circle cx="210" cy="228" r="9" fill="#f97316" />
+    <circle cx="234" cy="228" r="9" fill="#ef4444" /><circle cx="258" cy="228" r="9" fill="#a855f7" />
+  </g>
+  <text class="s" x="84" y="262">Высота</text>
+  <rect x="84" y="272" width="200" height="4" rx="2" fill="#ffffff" fill-opacity=".14" />
+  <circle cx="168" cy="274" r="7" fill="#4f8cff" />
+  <text class="s" x="84" y="308">Тип крыши</text>
+  <rect x="84" y="318" width="94" height="24" rx="8" class="chip" />
+  <text class="s" x="98" y="334">Плоская</text>
+  <rect x="186" y="318" width="98" height="24" rx="8" fill="#ffffff" fill-opacity=".06" />
+  <text class="s" x="200" y="334">Скатная</text>
+
+  <!-- right properties -->
+  <rect class="p" x="836" y="72" width="348" height="536" rx="16" />
+  <rect x="852" y="88" width="30" height="30" rx="10" fill="#fbbf24" />
+  <text class="t" x="892" y="102">Корпус А · 6 этажей</text>
+  <text class="s" x="892" y="117">Здание / дом · building</text>
+  <rect x="852" y="134" width="316" height="28" rx="9" fill="#ffffff" fill-opacity=".05" />
+  <text class="s" x="864" y="152">Свойства</text>
+  <text class="s" x="948" y="152">Геометрия</text>
+  <text class="s" x="1044" y="152">Данные</text>
+  <text class="s" x="852" y="188">ОПИСАНИЕ</text>
+  <rect x="852" y="196" width="316" height="46" rx="10" fill="#ffffff" fill-opacity=".05" />
+  <text class="s" x="864" y="214">Монолитный каркас, 6 этажей,</text>
+  <text class="s" x="864" y="230">стеклянный фасад.</text>
+  <text class="s" x="852" y="266">ПАРАМЕТРЫ ЗДАНИЯ</text>
+  <rect x="852" y="274" width="316" height="130" rx="12" fill="#ffffff" fill-opacity=".035" />
+  <text class="s" x="864" y="292">Высота            21 м</text>
+  <rect x="864" y="300" width="288" height="4" rx="2" fill="#ffffff" fill-opacity=".14" />
+  <circle cx="1030" cy="302" r="6" fill="#4f8cff" />
+  <text class="s" x="864" y="326">Этажей            6</text>
+  <rect x="864" y="334" width="288" height="4" rx="2" fill="#ffffff" fill-opacity=".14" />
+  <circle cx="920" cy="336" r="6" fill="#4f8cff" />
+  <text class="s" x="864" y="360">Тип крыши: плоская · цвет стен</text>
+  <g>
+    <circle cx="872" cy="376" r="7" fill="#4f8cff" /><circle cx="894" cy="376" r="7" fill="#22c55e" />
+    <circle cx="916" cy="376" r="7" fill="#a855f7" /><circle cx="938" cy="376" r="7" fill="#fbbf24" />
+    <circle cx="960" cy="376" r="7" fill="#ef4444" /><circle cx="982" cy="376" r="7" fill="#64748b" />
+  </g>
+  <text class="s" x="852" y="428">ОГРАЖДЕНИЕ ТЕРРИТОРИИ</text>
+  <rect x="852" y="436" width="152" height="30" rx="9" fill="#4f8cff" fill-opacity=".18" stroke="#4f8cff" stroke-opacity=".45" />
+  <text class="s" x="866" y="455">Охраняемая зона</text>
+  <rect x="1016" y="436" width="152" height="30" rx="9" fill="#ffffff" fill-opacity=".05" />
+  <text class="s" x="1030" y="455">Запретная зона</text>
+  <text class="s" x="852" y="494">МАТЕРИАЛ</text>
+  <rect x="852" y="502" width="66" height="24" rx="12" fill="#4f8cff" fill-opacity=".18" stroke="#4f8cff" stroke-opacity=".45" />
+  <text class="s" x="864" y="518">Сетка</text>
+  <rect x="926" y="502" width="86" height="24" rx="12" fill="#ffffff" fill-opacity=".06" />
+  <text class="s" x="938" y="518">Штакетник</text>
+  <rect x="1020" y="502" width="86" height="24" rx="12" fill="#ffffff" fill-opacity=".06" />
+  <text class="s" x="1032" y="518">Бетон</text>
+
+  <!-- bottom drawer -->
+  <rect class="p" x="70" y="470" width="740" height="196" rx="16" />
+  <text class="t" x="88" y="494">Объекты</text>
+  <rect x="150" y="482" width="28" height="18" rx="9" fill="#ffffff" fill-opacity=".08" />
+  <text class="m" x="158" y="495">14</text>
+  <rect x="196" y="482" width="180" height="20" rx="8" fill="#ffffff" fill-opacity=".05" />
+  <text class="s" x="206" y="496">Фильтр по имени, тегу…</text>
+  <g>
+    <circle cx="98" cy="524" r="7" fill="#fbbf24" /><text class="s" x="112" y="528">Кофейня «Купол»</text><text class="m" x="700" y="528">cafe</text>
+    <circle cx="98" cy="552" r="7" fill="#ef4444" /><text class="s" x="112" y="556">Опасность · вышка</text><text class="m" x="700" y="556">hazard</text>
+    <circle cx="98" cy="580" r="7" fill="#22c55e" /><text class="s" x="112" y="584">Парк «Зарядье»</text><text class="m" x="700" y="584">polygon</text>
+    <circle cx="98" cy="608" r="7" fill="#4f8cff" /><text class="s" x="112" y="612">Корпус А · 6 этажей</text><text class="m" x="700" y="612">building</text>
+    <circle cx="98" cy="636" r="7" fill="#a855f7" /><text class="s" x="112" y="640">Охраняемая территория</text><text class="m" x="700" y="640">fence</text>
+  </g>
+
+  <!-- bottom status -->
+  <rect class="p" x="16" y="500" width="44" height="166" rx="14" />
+  <g fill="none" stroke="#8d99aa" stroke-width="1.6">
+    <circle cx="38" cy="520" r="8" /><path d="M38 512 l2.6 8-2.6-1-2.6 1z" fill="#f87171" stroke="none" />
+    <path d="M32 552 h12 M38 546 v12" />
+    <path d="M32 584 h12" />
+  </g>
+  <rect class="p" x="70" y="676" width="272" height="34" rx="12" />
+  <text class="m" x="82" y="697">55.75280, 37.62290 · 100 м · z15.2</text>
+
+  <!-- pipe 3d preview -->
+  <rect class="p" x="836" y="618" width="348" height="92" rx="16" />
+  <text class="s" x="852" y="640">3D-превью · сравнение 2D/3D</text>
+  <rect x="852" y="650" width="316" height="46" rx="10" fill="#0e151f" />
+  <g stroke="#4f8cff" stroke-opacity=".7" fill="#4f8cff" fill-opacity=".14">
+    <path d="M872 688 v-22 l26-12 26 12 v22z" />
+    <path d="M936 688 v-14 l20-10 20 10 v14z" />
+    <path d="M992 688 v-28 l24-11 24 11 v28z" />
+  </g>
+  <text class="m" x="1060" y="686">pitch 58°</text>
+
+  <text class="s" x="16" y="706">Схема интерфейса MeshMaps · 2D/3D разметка OSM</text>
+</svg>
