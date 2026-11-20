@@ -117,6 +117,7 @@ export function seedObjects(): MapObject[] {
     height: 2.2,
     fenceType: 'guarded',
     fenceStyle: 'mesh',
+    color: '#22c55e',
     fenceOpacity: 0.95,
     properties: { высота: 2.2, тип: 'сетка' },
     tags: ['демо', 'охрана'],

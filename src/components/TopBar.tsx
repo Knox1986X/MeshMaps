@@ -4,7 +4,7 @@ import { BASEMAPS } from '@/map/styles'
 import type { BaseMapId, LayerVisibility } from '@/types'
 import { Icon } from './Icon'
 import { SearchBox } from './SearchBox'
-import { IconButton, Popover, Segmented, Switch } from './ui'
+import { IconButton, Popover, Segmented } from './ui'
 import { copyShareLink, exportGeoJSON, exportGPX, exportPNG, importFile, importOsmArea, openReport } from '@/features/actions'
 
 export function TopBar() {
@@ -166,7 +166,16 @@ export function TopBar() {
                 >
                   <Icon name={icon} size={14} className={layers[key] ? 'text-[rgb(var(--accent-soft))]' : 'muted'} />
                   <span className="flex-1 text-left text-[12px]">{label}</span>
-                  <Switch checked={layers[key]} onChange={() => toggleLayer(key)} />
+                  <span
+                    className={`relative h-[16px] w-[28px] shrink-0 rounded-full transition-colors ${
+                      layers[key] ? 'bg-[rgb(var(--accent))]' : 'bg-[rgb(var(--line)/0.18)]'
+                    }`}
+                  >
+                    <span
+                      className="absolute top-[2px] h-[12px] w-[12px] rounded-full bg-white transition-all"
+                      style={{ left: layers[key] ? 14 : 2 }}
+                    />
+                  </span>
                 </button>
               ))}
             </div>
