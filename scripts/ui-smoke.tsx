@@ -210,6 +210,16 @@ async function main() {
   await new Promise((r) => setTimeout(r, 60))
   ok(!document.querySelector('[data-mm-native-save]'), 'в браузере панель не появляется (обычное скачивание)')
 
+  /* offline packs UI */
+  useStore.getState().setOfflineOpen(true)
+  await new Promise((r) => setTimeout(r, 250))
+  const offlineHtml = rootEl.innerHTML
+  ok(offlineHtml.includes('Офлайн-карты'), 'модалка офлайн-карт открывается')
+  ok(offlineHtml.includes('Курган'), 'в каталоге виден город Курган')
+  ok(offlineHtml.includes('Скачать'), 'у набора есть кнопка скачивания')
+  useStore.getState().setOfflineOpen(false)
+  await new Promise((r) => setTimeout(r, 200))
+
   /* mobile layout: search overlay + bottom-sheet popovers */
   mobileMode = true
   const { TopBar } = await import('../src/components/TopBar')

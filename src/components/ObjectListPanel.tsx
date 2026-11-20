@@ -63,7 +63,7 @@ export function ObjectListPanel() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
           transition={{ duration: 0.26, ease: [0.22, 0.61, 0.36, 1] }}
-          className="pointer-events-auto absolute bottom-2.5 left-2.5 right-2.5 z-40 w-auto sm:left-[62px] sm:right-auto sm:z-30 sm:w-[min(860px,calc(100vw-70px))]"
+          className="pointer-events-auto absolute safe-bottom left-2.5 right-2.5 z-40 w-auto sm:left-[62px] sm:right-auto sm:z-30 sm:w-[min(860px,calc(100vw-70px))]"
           style={{
             // on phones the sheet spans the free space; the desktop column maths would go negative there
             maxWidth: compact

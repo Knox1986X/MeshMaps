@@ -6,6 +6,27 @@ export interface KV {
   value: unknown
 }
 
+export interface TileRow {
+  /** `<provider>/<z>/<x>/<y>` or `font/<fontstack>/<range>` */
+  key: string
+  /** offline pack id the tile belongs to */
+  pack: string
+  blob: Blob
+  at: number
+}
+
+export interface PackRow {
+  id: string
+  label: string
+  kind: 'city' | 'region' | 'custom'
+  bbox: [number, number, number, number]
+  minZoom: number
+  maxZoom: number
+  tiles: number
+  bytes: number
+  createdAt: number
+}
+
 export interface OsmCacheRow {
   key: string
   at: number
@@ -21,6 +42,8 @@ class MeshMapsDB extends Dexie {
   snapshots!: Table<Snapshot, string>
   kv!: Table<KV, string>
   osmCache!: Table<OsmCacheRow, string>
+  tiles!: Table<TileRow, string>
+  packs!: Table<PackRow, string>
 
   constructor() {
     super('meshmaps')
@@ -29,6 +52,11 @@ class MeshMapsDB extends Dexie {
       snapshots: 'id, at',
       kv: 'key',
       osmCache: 'key, at',
+    })
+    // v2 — offline map packs (vector tiles + font ranges)
+    this.version(2).stores({
+      tiles: 'key, pack, at',
+      packs: 'id, kind, createdAt',
     })
   }
 }
@@ -50,6 +78,22 @@ export async function deleteObjectById(id: string) {
 
 export async function loadObjects(): Promise<MapObject[]> {
   return db.objects.toArray()
+}
+
+/**
+ * Writes only what actually changed (added/updated/removed since `prev`).
+ * Rewriting the whole collection on every edit was a noticeable stall on phones.
+ */
+export async function syncObjectChanges(next: MapObject[], prev: MapObject[]) {
+  const prevById = new Map(prev.map((o) => [o.id, o]))
+  const nextIds = new Set(next.map((o) => o.id))
+  const changed = next.filter((o) => prevById.get(o.id) !== o)
+  const removed = prev.filter((o) => !nextIds.has(o.id)).map((o) => o.id)
+  if (!changed.length && !removed.length) return
+  await db.transaction('rw', db.objects, async () => {
+    if (changed.length) await db.objects.bulkPut(changed)
+    if (removed.length) await db.objects.bulkDelete(removed)
+  })
 }
 
 /** Keeps the whole collection in sync with the store (cheap `bulkPut`). */

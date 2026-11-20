@@ -17,5 +17,17 @@ export default defineConfig({
   build: {
     target: 'es2020',
     chunkSizeWarningLimit: 2200,
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        // MapLibre is ~80% of the bundle. Splitting it out lets the panels paint while
+        // the map engine is still parsing, and keeps vendor chunks cacheable between builds.
+        manualChunks: {
+          maplibre: ['maplibre-gl'],
+          react: ['react', 'react-dom'],
+          motion: ['framer-motion'],
+        },
+      },
+    },
   },
 })

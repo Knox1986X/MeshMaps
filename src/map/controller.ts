@@ -174,6 +174,25 @@ export function applyShadows(map: MapLibreMap, state: StoreState) {
   }
 }
 
+/**
+ * 3D buildings that come from the vector basemap (OpenFreeMap): real OSM heights,
+ * no Overpass request, and they work from an offline pack. Only the vector styles
+ * have these layers, so every call is guarded.
+ */
+export function syncBasemap3d(map: MapLibreMap, state: StoreState) {
+  const show = state.mode === '3d' && state.settings.osmBuildings
+  try {
+    if (map.getLayer('basemap-buildings-3d')) {
+      map.setLayoutProperty('basemap-buildings-3d', 'visibility', show ? 'visible' : 'none')
+    }
+    if (map.getLayer('basemap-buildings')) {
+      map.setLayoutProperty('basemap-buildings', 'visibility', show ? 'none' : 'visible')
+    }
+  } catch {
+    /* raster basemap or style mid-swap */
+  }
+}
+
 export function syncMode(map: MapLibreMap, state: StoreState, animate = true) {
   const is3d = state.mode === '3d'
   const center = map.getCenter()
@@ -188,6 +207,7 @@ export function syncMode(map: MapLibreMap, state: StoreState, animate = true) {
   map.easeTo(opts as never)
   applyTerrain(map, state)
   applyVisibility(map, state)
+  syncBasemap3d(map, state)
   if (is3d) map.setMaxPitch(85)
 }
 

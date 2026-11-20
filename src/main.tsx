@@ -4,6 +4,10 @@ import '@/styles/index.css'
 import App from '@/App'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { isNativeShell } from '@/utils/nativeSave'
+import { installOfflineProtocol } from '@/offline/protocol'
+
+// has to run before the first MapLibre instance is created
+installOfflineProtocol()
 
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>

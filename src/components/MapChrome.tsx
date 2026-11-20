@@ -37,6 +37,8 @@ export function MapChrome() {
   const toast = useStore((s) => s.toast)
   const selectedId = useStore((s) => s.selectedId)
   const bottomOpen = useStore((s) => s.bottomOpen)
+  const packs = useStore((s) => s.packs)
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false
   const [showMini, setShowMini] = useState(false)
   const [showTime, setShowTime] = useState(false)
 
@@ -75,7 +77,7 @@ export function MapChrome() {
 
   return (
     <>
-      <div className="pointer-events-none absolute bottom-2.5 left-2.5 z-30 flex flex-col items-start gap-2">
+      <div className="pointer-events-none absolute safe-bottom left-2.5 z-30 flex flex-col items-start gap-2">
         <AnimatePresence>
           {showTime && (
             <div className="panel pointer-events-auto w-[248px] p-2.5">
@@ -148,6 +150,19 @@ export function MapChrome() {
             </div>
             <div className="muted flex items-center gap-1.5 text-[8.5px] leading-none">
               <span className="uppercase tracking-wider">{mode === '3d' ? '3D' : '2D'}</span>
+              {(offline || packs.length > 0) && (
+                <>
+                  <span>·</span>
+                  <span
+                    className={
+                      offline ? 'font-semibold text-[rgb(var(--warn))]' : 'font-semibold text-[rgb(var(--ok))]'
+                    }
+                    title={offline ? 'Нет сети — карта из офлайн-наборов' : 'Офлайн-наборы доступны'}
+                  >
+                    {offline ? 'офлайн' : `офлайн ${packs.length}`}
+                  </span>
+                </>
+              )}
               <span>·</span>
               <span className="truncate">{BASEMAPS[basemap].labelRu}</span>
               <span>·</span>
@@ -159,7 +174,7 @@ export function MapChrome() {
 
       {/* right-bottom utility rail */}
       <div
-        className={`pointer-events-none absolute bottom-2.5 right-2.5 z-20 flex flex-col items-end gap-2 transition-[right] duration-300 ${
+        className={`pointer-events-none absolute safe-bottom right-2.5 z-20 flex flex-col items-end gap-2 transition-[right] duration-300 ${
           selectedId ? 'sm:right-[374px]' : ''
         }`}
       >

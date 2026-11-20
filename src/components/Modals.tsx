@@ -447,6 +447,15 @@ function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }
             <button className="btn !text-[11.5px]" onClick={() => exportGeoJSON()}>
               <Icon name="download" size={13} /> GeoJSON
             </button>
+            <button
+              className="btn !text-[11.5px]"
+              onClick={() => {
+                useStore.getState().setModal(null)
+                useStore.getState().setOfflineOpen(true)
+              }}
+            >
+              <Icon name="globe" size={13} /> Офлайн-карты
+            </button>
             <button className="btn !text-[11.5px] text-danger" onClick={() => (confirmClear ? (clearAll(), setConfirmClear(false), toast('ok', 'Карта очищена')) : setConfirmClear(true))}>
               <Icon name="trash" size={13} /> {confirmClear ? 'Нажмите ещё раз' : 'Очистить карту'}
             </button>

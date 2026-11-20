@@ -54,7 +54,7 @@ export function PropertiesPanel() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 24 }}
           transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
-          className="pointer-events-auto absolute bottom-2.5 left-2.5 right-2.5 top-[58px] z-40 w-auto sm:left-auto sm:right-3 sm:top-[66px] sm:z-30 sm:w-[360px]"
+          className="pointer-events-auto absolute safe-bottom left-2.5 right-2.5 top-[58px] z-40 w-auto sm:left-auto sm:right-3 sm:top-[66px] sm:z-30 sm:w-[360px]"
         >
           <div className="panel flex h-full flex-col overflow-hidden">
             <PropertiesHeader

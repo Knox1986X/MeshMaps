@@ -1,6 +1,6 @@
 import type { StyleSpecification } from 'maplibre-gl'
 import type { BaseMapId } from '@/types'
-import { VECTOR_ATTRIBUTION, vectorLayers, vectorSources } from './vectorStyle'
+import { OFFLINE_GLYPHS, VECTOR_ATTRIBUTION, vectorLayers, vectorSources } from './vectorStyle'
 
 export const GLYPHS_URL = 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf'
 export const FONT_STACK = ['Open Sans Semibold']
@@ -90,7 +90,7 @@ export function buildStyle(id: BaseMapId, theme: 'dark' | 'light'): StyleSpecifi
     return {
       version: 8,
       name: `MeshMaps · ${id}`,
-      glyphs: GLYPHS_URL,
+      glyphs: OFFLINE_GLYPHS,
       sources: { terrain: TERRAIN_SOURCE, ...vectorSources() },
       layers: vectorLayers(id === 'carto-dark' ? 'dark' : 'light'),
     }

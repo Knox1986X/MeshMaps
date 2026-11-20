@@ -213,6 +213,14 @@ export function TopBar() {
               <MenuRow icon="camera" label="Снимок карты (PNG)" onClick={() => { exportPNG(true); close() }} />
               <MenuRow icon="chart" label="PDF-отчёт по объектам" onClick={() => { openReport(); close() }} />
               <MenuRow icon="globe" label="Скачать объекты OSM" onClick={() => { void importOsmArea(); close() }} />
+              <MenuRow
+                icon="download"
+                label="Офлайн-карты (города, области)"
+                onClick={() => {
+                  close()
+                  useStore.getState().setOfflineOpen(true)
+                }}
+              />
               <MenuRow icon="share" label="Ссылка на этот вид" onClick={() => { copyShareLink(); close() }} />
               <MenuRow icon="expand" label={split ? 'Убрать 3D-превью' : '3D-превью (сравнение)'} onClick={() => { toggleSplit(); close() }} />
             </div>

@@ -26,6 +26,16 @@ import { iconSvg } from '../src/icons'
 import { BASEMAPS, attributionFor, buildStyle, isVectorBasemap, sampleTileUrl } from '../src/map/styles'
 import { vectorLayers, vectorSources } from '../src/map/vectorStyle'
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
+import {
+  CITIES,
+  REGIONS,
+  customPack,
+  estimateBytes,
+  estimateTiles,
+  formatBytes,
+  tilesForBBox,
+} from '../src/offline/catalog'
+import { parseFontUrl, parseTileUrl } from '../src/offline/url'
 import type { MapObject } from '../src/types'
 
 // minimal globals used lazily by the store / share helpers
@@ -93,7 +103,12 @@ ok(
 ok(isVectorBasemap('carto-dark') && isVectorBasemap('carto-light'), 'тёмная/светлая — векторные (OpenFreeMap)')
 ok(darkStyle.layers.filter((l) => l.type === 'raster').length === 0, 'в тёмной подложке нет растровых слоёв')
 ok(darkStyle.layers[0].id === 'basemap', 'фоновый слой сохраняет id `basemap` (нужен мини-карте)')
-ok((darkStyle.sources.openmaptiles as { url?: string }).url === 'https://tiles.openfreemap.org/planet', 'векторный источник задан через TileJSON (не привязан к версии тайлов)')
+ok(
+  Array.isArray((darkStyle.sources.openmaptiles as { tiles?: string[] }).tiles) &&
+    (darkStyle.sources.openmaptiles as { tiles: string[] }).tiles[0].startsWith('mmoffline://'),
+  'векторные тайлы идут через офлайн-протокол (кеш → сеть)',
+)
+ok(darkStyle.glyphs.startsWith('mmoffline://'), 'глифы тоже через офлайн-протокол')
 ok(Object.keys(vectorSources()).includes('openmaptiles'), 'источник openmaptiles объявлен')
 ok(vectorLayers('dark').length >= 10, `слоёв векторной подложки: ${vectorLayers('dark').length}`)
 ok(vectorLayers('dark').some((l) => l.type === 'fill' && l['source-layer'] === 'water'), 'есть вода')
@@ -110,6 +125,32 @@ const invalid = styleIds
   .map((id) => [id, validateStyleMin(buildStyle(id, 'dark') as never)] as const)
   .filter(([, errors]) => errors.length > 0)
 ok(invalid.length === 0, 'все стили проходят валидатор maplibre-gl-style-spec', invalid.map(([id, e]) => `${id}: ${e[0]?.message}`))
+
+/* ------------------------------------------------------------------ */
+/* offline packs                                                       */
+/* ------------------------------------------------------------------ */
+
+const kurgan = CITIES.find((c) => c.label === 'Курган')
+const kurganRegion = REGIONS.find((r) => r.label === 'Курганская область')
+ok(!!kurgan && kurgan.kind === 'city', 'в каталоге есть город Курган')
+ok(!!kurganRegion && kurganRegion.kind === 'region', 'в каталоге есть Курганская область')
+ok(CITIES.length >= 20 && REGIONS.length >= 10, `каталог: ${CITIES.length} городов, ${REGIONS.length} областей`)
+
+const cityTiles = tilesForBBox(kurgan!.bbox, kurgan!.minZoom, kurgan!.maxZoom)
+ok(cityTiles.length > 100 && cityTiles.length < 2000, `город ≈ ${cityTiles.length} тайлов (разумный объём)`)
+ok(cityTiles.every((t) => t.x >= 0 && t.y >= 0 && t.z >= kurgan!.minZoom), 'тайлы в пределах сетки')
+const regionTiles = estimateTiles(kurganRegion!)
+ok(regionTiles > cityTiles.length, 'область требует больше тайлов, чем город')
+ok(estimateBytes(kurgan!) > 0 && formatBytes(estimateBytes(kurgan!)).endsWith('МБ'), 'оценка размера в МБ')
+ok(tilesForBBox([0, 0, 0, 0], 3, 3).length === 1, 'нулевой bbox → один тайл')
+const custom = customPack([37.5, 55.6, 37.7, 55.8], 15.4)
+ok(custom.kind === 'custom' && custom.maxZoom === 15 && custom.minZoom === 9, 'набор «текущий вид» строится от зума')
+
+ok(parseTileUrl('mmoffline://omvt/15/19808/10306')?.z === 15, 'протокол разбирает URL тайла')
+ok(parseTileUrl('mmoffline://omvt/15/19808/10306.pbf')?.x === 19808, 'расширение .pbf не мешает')
+ok(parseTileUrl('mmoffline://omvt/bad/url') === null, 'битый URL тайла отклоняется')
+ok(parseFontUrl('mmoffline://font/Open%20Sans%20Semibold/1024-1279')?.stack === 'Open Sans Semibold', 'протокол разбирает URL глифов')
+ok(parseTileUrl('mmoffline://font/Open%20Sans%20Semibold/0-255') === null, 'шрифты и тайлы не путаются')
 
 /* ------------------------------------------------------------------ */
 /* drawing                                                             */

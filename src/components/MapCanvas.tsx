@@ -5,7 +5,7 @@ import { featureCollection } from '@turf/helpers'
 import { useStore } from '@/store/useStore'
 import type { MapObject } from '@/types'
 import { getCategory } from '@/icons/categories'
-import { buildStyle } from '@/map/styles'
+import { buildStyle, isVectorBasemap } from '@/map/styles'
 import { isBasemapReachable } from '@/map/basemapProbe'
 import { addMeshLayers, CLICK_LAYERS, HIT_LAYERS, SRC, setSourceData } from '@/map/layers'
 import {
@@ -15,6 +15,7 @@ import {
   applyTerrain,
   applyVisibility,
   popupHtml,
+  syncBasemap3d,
   syncMode,
   updateGrid,
 } from '@/map/controller'
@@ -60,8 +61,11 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
         bearing: variant === 'pip' ? -26 : st.view.bearing,
         maxPitch: 85,
         attributionControl: false,
+        // PNG-экспорт читает канвас, поэтому буфер сохраняем — но DPR ограничиваем:
+        // на телефоне devicePixelRatio 3 означает 9x пикселей и заметные подтормаживания.
         preserveDrawingBuffer: true,
-        antialias: true,
+        pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        antialias: (window.devicePixelRatio || 1) <= 1.5,
         fadeDuration: 140,
         dragRotate: true,
         keyboard: false,
@@ -85,6 +89,7 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
       const sourceId = (e as { sourceId?: string }).sourceId
       if (msg.includes('API KEY')) console.warn('[meshmaps] basemap provider refused the tiles:', msg)
       if (variant !== 'main' || fellBack || sourceId !== 'openmaptiles') return
+      if (navigator.onLine === false || useStore.getState().packs.length > 0) return
       vectorTileErrors += 1
       if (vectorTileErrors >= 6) {
         fellBack = true
@@ -103,6 +108,7 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
       void applyData(map, s)
       applyVisibility(map, s)
       applyTerrain(map, s)
+      syncBasemap3d(map, s)
       applyHillshade(map, s)
       applyShadows(map, s)
       updateGrid(map, s)
@@ -133,7 +139,8 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
     const scheduleOsm = () => {
       const s = useStore.getState()
       if (variant !== 'main') return
-      const wants = s.mode === '3d' && s.layers.osm3d && s.settings.osmBuildings
+      const widgetNeeded = !isVectorBasemap(s.basemap)
+      const wants = widgetNeeded && s.mode === '3d' && s.layers.osm3d && s.settings.osmBuildings
       window.clearTimeout(osmTimer)
       if (!wants || map.getZoom() < 14.1) {
         setSourceData(map, SRC.osm3d, emptyFc)
@@ -167,33 +174,52 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
       scheduleOsm()
     })
 
+    let pipQueued = false
     map.on('move', () => {
-      if (variant !== 'main') return
+      if (variant !== 'main' || pipQueued) return
       const pip = mapRegistry.pip
-      if (pip) pip.jumpTo({ center: map.getCenter(), zoom: map.getZoom() })
+      if (!pip) return
+      pipQueued = true
+      requestAnimationFrame(() => {
+        pipQueued = false
+        const target = mapRegistry.pip
+        if (!target) return
+        try {
+          target.jumpTo({ center: map.getCenter(), zoom: map.getZoom() })
+        } catch {
+          /* pip may be removed mid-flight */
+        }
+      })
     })
 
     /* ---------------- interactions ---------------- */
     let lastPreview = 0
     if (variant === 'main') {
+      // mousemove fires ~120 times per second on a trackpad; writing every event into the
+      // store re-rendered the whole UI (that is what made the app feel frozen).
+      let lastCursor = 0
+      let lastHover = 0
       map.on('mousemove', (e) => {
         const s = useStore.getState()
-        s.setCursor([e.lngLat.lng, e.lngLat.lat])
+        const now = performance.now()
         const tool = s.tool
         const drawing = DRAW_TOOLS.includes(tool)
-        if (s.draft) {
-          const ts = performance.now()
-          if (ts - lastPreview > 55) {
-            lastPreview = ts
-            setSourceData(
-              map,
-              SRC.draft,
-              draftFeatureCollection({ ...s.draft, hover: [e.lngLat.lng, e.lngLat.lat] }),
-            )
-          }
+        if (now - lastCursor > 90) {
+          lastCursor = now
+          s.setCursor([e.lngLat.lng, e.lngLat.lat])
+        }
+        if (s.draft && now - lastPreview > 55) {
+          lastPreview = now
+          setSourceData(
+            map,
+            SRC.draft,
+            draftFeatureCollection({ ...s.draft, hover: [e.lngLat.lng, e.lngLat.lat] }),
+          )
         }
         map.getCanvas().style.cursor = drawing ? 'crosshair' : 'grab'
         if (drawing) return
+        if (now - lastHover < 110) return
+        lastHover = now
 
         const features = map.queryRenderedFeatures(e.point, { layers: HIT_LAYERS })
         const id = features[0]?.properties?.objectId ? String(features[0].properties.objectId) : null
@@ -337,7 +363,11 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
         syncMode(m, s)
         scheduleOsm()
       }
-      if (s.layers.osm3d !== prev.layers.osm3d || s.settings.osmBuildings !== prev.settings.osmBuildings) scheduleOsm()
+      if (s.layers.osm3d !== prev.layers.osm3d || s.settings.osmBuildings !== prev.settings.osmBuildings) {
+        syncBasemap3d(m, s)
+        scheduleOsm()
+      }
+      if (s.settings.osmBuildings !== prev.settings.osmBuildings) syncBasemap3d(m, s)
       if (s.layers.hillshade !== prev.layers.hillshade) applyHillshade(m, s)
       if (s.layers.terrain !== prev.layers.terrain) applyTerrain(m, s)
       if (s.layers.shadows !== prev.layers.shadows || s.settings.sunDate !== prev.settings.sunDate) applyShadows(m, s)
@@ -551,7 +581,12 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
           <div className="absolute inset-0 z-20" onClick={() => setMenu(null)} onContextMenu={(e) => e.preventDefault()} />
           <div
             className="panel-solid z-30 w-[248px] animate-floatIn overflow-hidden p-1.5"
-            style={{ position: 'absolute', left: Math.min(menu.x, (containerRef.current?.clientWidth ?? 400) - 260), top: menu.y }}
+            style={{
+              position: 'absolute',
+              // keep the whole menu on screen, whatever the tap position
+              left: Math.max(8, Math.min(menu.x, (containerRef.current?.clientWidth ?? 400) - 264)),
+              top: Math.max(8, Math.min(menu.y, (containerRef.current?.clientHeight ?? 600) - 320)),
+            }}
           >
             <div className="muted px-2.5 py-1.5 font-mono text-[10.5px]">
               {formatCoords(menu.lngLat[0], menu.lngLat[1])}

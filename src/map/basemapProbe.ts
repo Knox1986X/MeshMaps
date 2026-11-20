@@ -40,6 +40,8 @@ function probeVector(): Promise<boolean> {
 }
 
 export function isBasemapReachable(id: BaseMapId, center: [number, number], zoom: number): Promise<boolean> {
+  // offline: tiles come from the downloaded packs, nothing to probe
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve(true)
   const cached = probed.get(id)
   if (cached) return cached
 

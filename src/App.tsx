@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import MapCanvas from '@/components/MapCanvas'
 import { TopBar } from '@/components/TopBar'
 import { Toolbar } from '@/components/Toolbar'
 import { PropertiesPanel } from '@/components/PropertiesPanel'
@@ -8,12 +7,17 @@ import { ObjectListPanel } from '@/components/ObjectListPanel'
 import { MapChrome } from '@/components/MapChrome'
 import { DraftBar, EmptyHint, Toasts } from '@/components/Overlays'
 import { Modals } from '@/components/Modals'
+import { OfflineModal } from '@/components/OfflineModal'
 import { Icon } from '@/components/Icon'
 import { usePersistence } from '@/hooks/usePersistence'
 import { useHotkeys } from '@/hooks/useHotkeys'
 import { useFileDrop } from '@/hooks/useFileDrop'
 import { useStore } from '@/store/useStore'
 import { mapRegistry } from '@/map/registry'
+
+// The map engine (maplibre-gl) is the heaviest dependency: load it in its own chunk so the
+// chrome, panels and stored data appear immediately on a cold start.
+const MapCanvas = lazy(() => import('@/components/MapCanvas'))
 
 export default function App() {
   usePersistence()
@@ -31,7 +35,9 @@ export default function App() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[rgb(var(--bg))]">
-      <MapCanvas />
+      <Suspense fallback={<div className="absolute inset-0 bg-[rgb(var(--bg))]" />}>
+        <MapCanvas />
+      </Suspense>
       <EmptyHint />
       <TopBar />
       <Toolbar />
@@ -41,6 +47,7 @@ export default function App() {
       <MapChrome />
       <Toasts />
       <Modals />
+      <OfflineModal />
 
       {/* 3D preview window — 2D/3D comparison (idea 37) */}
       <AnimatePresence>
@@ -53,7 +60,9 @@ export default function App() {
             className="pointer-events-auto absolute left-1/2 top-[64px] z-20 hidden w-[320px] -translate-x-1/2 overflow-hidden rounded-2xl border border-[rgb(var(--line)/0.14)] shadow-panel md:block"
             style={{ height: 208 }}
           >
-            <MapCanvas variant="pip" />
+            <Suspense fallback={null}>
+              <MapCanvas variant="pip" />
+            </Suspense>
             <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between px-2 py-1.5">
               <span className="rounded-md bg-black/45 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wider text-white/85 backdrop-blur">
                 3D-превью

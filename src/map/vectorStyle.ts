@@ -9,6 +9,12 @@ import type { ExpressionSpecification, LayerSpecification, SourceSpecification }
  */
 
 export const VECTOR_TILEJSON = 'https://tiles.openfreemap.org/planet'
+/**
+ * Tiles and glyphs are requested through the offline protocol: downloaded packs answer
+ * from IndexedDB, everything else goes to the network. One style for online and offline.
+ */
+export const OFFLINE_TILES = 'mmoffline://omvt/{z}/{x}/{y}'
+export const OFFLINE_GLYPHS = 'mmoffline://font/{fontstack}/{range}'
 export const VECTOR_ATTRIBUTION = '© OpenFreeMap · © OpenStreetMap contributors'
 export const VECTOR_MAX_ZOOM = 14
 
@@ -33,6 +39,9 @@ type Palette = {
   rail: string
   building: string
   buildingLine: string
+  building3dLow: string
+  building3dMid: string
+  building3dHigh: string
   label: string
   labelHalo: string
 }
@@ -60,6 +69,9 @@ const DARK: Palette = {
   rail: '#28313f',
   building: '#161d28',
   buildingLine: '#1c2531',
+  building3dLow: '#1c2735',
+  building3dMid: '#2b3a4e',
+  building3dHigh: '#44586f',
   label: '#a7b6cc',
   labelHalo: '#070b11',
 }
@@ -85,6 +97,9 @@ const LIGHT: Palette = {
   rail: '#d5dbe5',
   building: '#e3e8f0',
   buildingLine: '#d5dbe5',
+  building3dLow: '#eef2f7',
+  building3dMid: '#dfe6ef',
+  building3dHigh: '#c9d5e4',
   label: '#46536a',
   labelHalo: '#ffffff',
 }
@@ -96,7 +111,7 @@ const zoomInterp = (a: number, av: number, b: number, bv: number): ExpressionSpe
 
 export function vectorSources(): Record<string, SourceSpecification> {
   return {
-    openmaptiles: { type: 'vector', url: VECTOR_TILEJSON },
+    openmaptiles: { type: 'vector', tiles: [OFFLINE_TILES], maxzoom: VECTOR_MAX_ZOOM },
   }
 }
 
@@ -344,6 +359,34 @@ export function vectorLayers(theme: 'dark' | 'light'): LayerSpecification[] {
       'text-halo-color': p.labelHalo,
       'text-halo-width': 1.2,
       'text-opacity': 0.6,
+    },
+  })
+
+  // 3D buildings straight from the vector tiles: `render_height` is OSM's own height
+  // (height / building:levels), so this needs no Overpass request and works offline.
+  layers.push({
+    id: 'basemap-buildings-3d',
+    type: 'fill-extrusion',
+    ...src,
+    'source-layer': 'building',
+    minzoom: 13,
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-extrusion-color': [
+        'interpolate',
+        ['linear'],
+        ['coalesce', ['get', 'render_height'], 8],
+        0,
+        p.building3dLow,
+        24,
+        p.building3dMid,
+        80,
+        p.building3dHigh,
+      ],
+      'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 7],
+      'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+      'fill-extrusion-opacity': 0.92,
+      'fill-extrusion-vertical-gradient': true,
     },
   })
 

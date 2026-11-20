@@ -17,6 +17,16 @@ import type {
 } from '@/types'
 import { CATEGORIES, getCategory } from '@/icons/categories'
 import { geometryArea, geometryLength, haversine, pathLength } from '@/utils/geo'
+import type { PackRow } from '@/db/db'
+import {
+  estimateTiles,
+  formatBytes,
+  type PackDef,
+} from '@/offline/catalog'
+import { deletePack, downloadPack, listPacks } from '@/offline/storage'
+
+/** active download controller (only one pack at a time) */
+let packAbort: AbortController | null = null
 
 export type Locale = 'ru' | 'en'
 export type SortKey = 'updated' | 'created' | 'name' | 'category' | 'size'
@@ -102,6 +112,11 @@ interface StoreState {
   route: { points: [number, number][]; result: RouteResult | null; profile: 'driving' | 'walking' | 'cycling' }
   history: { past: HistoryEntry[]; future: HistoryEntry[] }
   modal: ModalId
+  /** offline map packs (IndexedDB tiles) */
+  offlineOpen: boolean
+  packs: PackRow[]
+  packProgress: Record<string, { done: number; total: number; bytes: number }>
+  packError: string | null
   bottomOpen: boolean
   split: boolean
   year: number | null
@@ -148,6 +163,11 @@ interface StoreState {
   redo(): void
   pushHistory(label: string): void
   setModal(modal: ModalId): void
+  setOfflineOpen(open: boolean): void
+  refreshPacks(): Promise<void>
+  downloadPackNow(def: PackDef): Promise<void>
+  cancelPackDownload(): void
+  removePack(id: string): Promise<void>
   setBottomOpen(open: boolean): void
   toggleSplit(): void
   setYear(year: number | null): void
@@ -271,6 +291,10 @@ export const useStore = create<StoreState>((set, get) => ({
   route: { points: [], result: null, profile: 'driving' },
   history: { past: [], future: [] },
   modal: null,
+  offlineOpen: false,
+  packs: [],
+  packProgress: {},
+  packError: null,
   bottomOpen: false,
   split: false,
   year: null,
@@ -500,6 +524,59 @@ export const useStore = create<StoreState>((set, get) => ({
     }),
 
   setModal: (modal) => set({ modal }),
+
+  /* ---------------- offline packs ---------------- */
+  setOfflineOpen: (offlineOpen) => set({ offlineOpen }),
+
+  refreshPacks: async () => {
+    const packs = await listPacks()
+    set({ packs })
+  },
+
+  downloadPackNow: async (def) => {
+    const controller = new AbortController()
+    packAbort = controller
+    set((s) => ({
+      packError: null,
+      packProgress: { ...s.packProgress, [def.id]: { done: 0, total: estimateTiles(def), bytes: 0 } },
+    }))
+    try {
+      const row = await downloadPack(
+        def,
+        (p) => set((s) => ({ packProgress: { ...s.packProgress, [def.id]: p } })),
+        controller.signal,
+      )
+      const packs = await listPacks()
+      set((s) => {
+        const next = { ...s.packProgress }
+        delete next[def.id]
+        return { packs, packProgress: next }
+      })
+      void useStore.getState().toast('ok', `Офлайн-набор «${row.label}» готов · ${formatBytes(row.bytes)}`)
+    } catch (err) {
+      const aborted = err instanceof DOMException && err.name === 'AbortError'
+      set((s) => {
+        const next = { ...s.packProgress }
+        delete next[def.id]
+        return { packProgress: next, packError: aborted ? null : 'Не удалось скачать набор — проверьте соединение' }
+      })
+      if (!aborted) useStore.getState().toast('error', 'Скачивание прервано')
+    } finally {
+      packAbort = null
+    }
+  },
+
+  cancelPackDownload: () => {
+    packAbort?.abort()
+    packAbort = null
+  },
+
+  removePack: async (id) => {
+    await deletePack(id)
+    const packs = await listPacks()
+    set({ packs })
+    useStore.getState().toast('info', 'Офлайн-набор удалён')
+  },
   setBottomOpen: (bottomOpen) => set({ bottomOpen }),
   toggleSplit: () => set((s) => ({ split: !s.split })),
   setYear: (year) => set({ year }),

@@ -46,7 +46,11 @@
   body,
   #root {
     height: 100%;
+    max-height: 100%;
     margin: 0;
+    /* nothing may scroll the page itself — the map owns the viewport */
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   body {
@@ -356,4 +360,23 @@
   .tool-btn {
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* system stack: no third-party webfont request, so the first paint is instant and offline-safe */
+@layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+}
+
+/* bottom-anchored controls respect the gesture bar / rounded corners */
+.safe-bottom {
+  bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* keep every floating panel inside the viewport */
+.clamp-panel {
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
 }
