@@ -192,6 +192,23 @@ async function main() {
   useStore.getState().setModal(null)
   await new Promise((r) => setTimeout(r, 200))
 
+  /* Android shell: exports must show a panel instead of a dead <a download> */
+  ;(dom.window as unknown as Record<string, unknown>).Capacitor = { isNativePlatform: () => true }
+  const { download } = await import('../src/features/actions')
+  const { dismissFileFallback } = await import('../src/utils/nativeSave')
+  download('meshmaps-test.geojson', '{"type":"FeatureCollection","features":[]}', 'application/geo+json')
+  await new Promise((r) => setTimeout(r, 120))
+  const panel = document.querySelector('[data-mm-native-save]')
+  ok(!!panel, 'в Android-оболочке экспорт показывает панель сохранения')
+  const area2 = panel?.querySelector('textarea')
+  ok(!!area2?.value.includes('FeatureCollection'), 'панель содержит текст файла')
+  ok(!!panel?.textContent?.includes('Копировать'), 'есть кнопка копирования')
+  dismissFileFallback()
+  ;(dom.window as unknown as Record<string, unknown>).Capacitor = { isNativePlatform: () => false }
+  download('meshmaps-test.geojson', '{}', 'application/geo+json')
+  await new Promise((r) => setTimeout(r, 60))
+  ok(!document.querySelector('[data-mm-native-save]'), 'в браузере панель не появляется (обычное скачивание)')
+
   const realErrors = errors.filter(
     (e) =>
       !/WebGL|not implemented|getContext|maplibre|Failed to fetch|IndexedDB|indexedDB|IDB|Dexie/i.test(e) &&

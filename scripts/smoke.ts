@@ -23,6 +23,9 @@ import { buildShareUrl, parseShareHash } from '../src/utils/share'
 import { createObject, objectStats, useStore, visibleObjects } from '../src/store/useStore'
 import { getCategory, CATEGORIES } from '../src/icons/categories'
 import { iconSvg } from '../src/icons'
+import { BASEMAPS, attributionFor, buildStyle, isVectorBasemap, sampleTileUrl } from '../src/map/styles'
+import { vectorLayers, vectorSources } from '../src/map/vectorStyle'
+import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
 import type { MapObject } from '../src/types'
 
 // minimal globals used lazily by the store / share helpers
@@ -70,6 +73,43 @@ ok(getCategory('unknown-cat').id === 'poi', 'неизвестная катего
 const svg = iconSvg('house', { color: '#4f8cff' })
 ok(svg.startsWith('<svg') && svg.includes('stroke'), 'iconSvg генерирует двухслойную иконку')
 ok(iconSvg('nonexistent', { color: '#fff' }).includes('<circle'), 'неизвестный глиф → точка')
+// reference sheet (page 09): rounded plate + double hexagon keyline + glyph
+ok((svg.match(/<path d="M24 /g) ?? []).length >= 2, 'иконка содержит двойной шестиугольник из референса')
+ok(svg.includes('stroke-opacity=".92"'), 'внешний контур гексагона виден')
+ok((svg.match(/<g transform="translate\(12.6 12.4\) scale\(\.91\)"/g) ?? []).length === 2, 'глиф: подложка-обводка + белый контур')
+
+/* ------------------------------------------------------------------ */
+/* basemaps (must stay keyless — the APK broke on CARTO "API KEY REQUIRED") */
+/* ------------------------------------------------------------------ */
+
+const darkStyle = buildStyle('carto-dark', 'dark')
+const allStyles = (['carto-dark', 'carto-light', 'osm', 'satellite', 'topo', 'blank'] as const).map((id) =>
+  JSON.stringify(buildStyle(id, id === 'carto-light' ? 'light' : 'dark')),
+)
+ok(
+  !allStyles.some((j) => /cartocdn|basemaps\.carto|api\.mapbox|stadiamaps|maptiler|thunderforest/i.test(j)),
+  'в стилях нет провайдеров, требующих API-ключ',
+)
+ok(isVectorBasemap('carto-dark') && isVectorBasemap('carto-light'), 'тёмная/светлая — векторные (OpenFreeMap)')
+ok(darkStyle.layers.filter((l) => l.type === 'raster').length === 0, 'в тёмной подложке нет растровых слоёв')
+ok(darkStyle.layers[0].id === 'basemap', 'фоновый слой сохраняет id `basemap` (нужен мини-карте)')
+ok((darkStyle.sources.openmaptiles as { url?: string }).url === 'https://tiles.openfreemap.org/planet', 'векторный источник задан через TileJSON (не привязан к версии тайлов)')
+ok(Object.keys(vectorSources()).includes('openmaptiles'), 'источник openmaptiles объявлен')
+ok(vectorLayers('dark').length >= 10, `слоёв векторной подложки: ${vectorLayers('dark').length}`)
+ok(vectorLayers('dark').some((l) => l.type === 'fill' && l['source-layer'] === 'water'), 'есть вода')
+ok(vectorLayers('dark').some((l) => l.type === 'fill' && l['source-layer'] === 'building'), 'есть здания')
+ok(vectorLayers('light')[0].type === 'background' && JSON.stringify(vectorLayers('light')) !== JSON.stringify(vectorLayers('dark')), 'светлая палитра отличается')
+ok(Object.keys(BASEMAPS).length === 6, `подложек: ${Object.keys(BASEMAPS).length}`)
+const tileUrl = sampleTileUrl('osm', [37.6201, 55.7539], 15.2)
+ok(!!tileUrl && /\/\d+\/\d+\/\d+\.png$/.test(tileUrl), 'URL-проба тайла подставляет z/x/y')
+ok(sampleTileUrl('carto-dark', [37.6201, 55.7539], 15) === null, 'для векторной подложки проба идёт через TileJSON')
+ok(sampleTileUrl('blank', [37.6201, 55.7539], 15) === null, 'для «только разметка» пробы нет')
+ok(attributionFor('carto-dark').includes('OpenFreeMap'), 'атрибуция векторной подложки')
+const styleIds = ['carto-dark', 'carto-light', 'osm', 'satellite', 'topo', 'blank'] as const
+const invalid = styleIds
+  .map((id) => [id, validateStyleMin(buildStyle(id, 'dark') as never)] as const)
+  .filter(([, errors]) => errors.length > 0)
+ok(invalid.length === 0, 'все стили проходят валидатор maplibre-gl-style-spec', invalid.map(([id, e]) => `${id}: ${e[0]?.message}`))
 
 /* ------------------------------------------------------------------ */
 /* drawing                                                             */
