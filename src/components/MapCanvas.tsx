@@ -76,10 +76,23 @@ export default function MapCanvas({ variant = 'main' }: { variant?: 'main' | 'pi
     else mapRegistry.main = map
 
 
+    // Second safety net (the first one is the up-front probe): if the vector tiles keep
+    // failing after the style loaded, drop down to plain OSM raster so the map is never empty.
+    let vectorTileErrors = 0
+    let fellBack = false
     map.on('error', (e) => {
       const msg = String((e as { error?: Error }).error?.message ?? '')
-      if (!msg.includes('404') && !msg.includes('Failed to fetch')) {
-        // keep console quiet for missing tiles
+      const sourceId = (e as { sourceId?: string }).sourceId
+      if (msg.includes('API KEY')) console.warn('[meshmaps] basemap provider refused the tiles:', msg)
+      if (variant !== 'main' || fellBack || sourceId !== 'openmaptiles') return
+      vectorTileErrors += 1
+      if (vectorTileErrors >= 6) {
+        fellBack = true
+        const st2 = useStore.getState()
+        if (st2.basemap !== 'osm') {
+          st2.setBasemap('osm')
+          st2.toast('warn', 'Векторная подложка не загрузилась — включён OSM')
+        }
       }
     })
 
